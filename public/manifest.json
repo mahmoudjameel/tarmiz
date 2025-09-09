@@ -1,0 +1,39 @@
+{
+  "short_name": "ترمُز",
+  "name": "ترمُز - شركة التصميم والاستشارات",
+  "description": "شركة سعودية متخصصة في التصميم الداخلي والخارجي، التخطيط الحضري، تصميم المناظر الطبيعية، تطوير العلامات التجارية، والاستشارات التسويقية والتشغيلية والتقنية",
+  "icons": [
+    {
+      "src": "images/logo.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "images/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "images/logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#10B981",
+  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "design", "consulting"],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}

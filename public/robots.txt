@@ -1,0 +1,23 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://tramuz.netlify.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Disallow admin areas (if any)
+Disallow: /admin/
+Disallow: /private/
+
+# Allow important pages
+Allow: /
+Allow: /#about
+Allow: /#services
+Allow: /#works
+Allow: /#team
+Allow: /#testimonials
+Allow: /#success
+Allow: /#contact
