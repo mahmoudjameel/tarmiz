@@ -1,0 +1,575 @@
+{
+  "navigation": {
+    "home": "Home",
+    "about": "About Us",
+    "services": "Services",
+    "works": "Our Works",
+    "clients": "Clients",
+    "contact": "Contact Us",
+    "language": "Language"
+  },
+  "hero": {
+    "title": "Welcome to Tramuz Company",
+    "subtitle": "Engineering and Visual Creativity",
+    "description": "Your journey from planning to excellence",
+    "getStarted": "Start Your Project",
+    "watchVideo": "Watch Video",
+    "badge": "Tramuz Design & Consulting Company",
+    "slides": [
+      {
+        "title": "Welcome to Tramuz",
+        "subtitle": "Engineering and Visual Creativity",
+        "description": "Your journey from planning to excellence"
+      },
+      {
+        "title": "Innovative Designs",
+        "subtitle": "For Restaurants and Cafes",
+        "description": "We transform your ideas into amazing reality"
+      },
+      {
+        "title": "Specialized Consultations",
+        "subtitle": "For Business Growth",
+        "description": "We accompany you on your success journey"
+      }
+    ]
+  },
+  "services": {
+    "title": "Our Distinguished Services",
+    "subtitle": "We provide a comprehensive range of specialized services in interior and exterior design, urban planning, landscape design, brand development, and specialized consultations in various fields with international standards and exceptional quality",
+    "addToCart": "Add to Cart",
+    "price": "Price",
+    "sar": "SAR",
+    "interiorDesign": {
+      "title": "Interior Design",
+      "description": "We transform interior design art into tangible reality that adds value and beauty to every space",
+      "details": [
+        "Practical and elegant designs that reflect client identity",
+        "Careful selection of colors and lighting",
+        "Furniture arrangement for harmony and comfort",
+        "Transforming ideas into inspiring living experiences",
+        "Attention to the finest details"
+      ],
+      "fullDescription": "At our company, we transform interior design art into tangible reality that adds value and beauty to every space. We create practical and elegant designs that reflect our clients' identity and meet their needs precisely. We pay attention to the finest details from color and lighting selection to furniture arrangement to achieve harmony and comfort. Our goal is to transform every idea into an inspiring and integrated living experience.",
+      "features": [
+        "Innovative interior space design",
+        "Appropriate color and lighting selection",
+        "Furniture and decoration arrangement",
+        "Improving flow and movement",
+        "Applying latest design trends"
+      ],
+      "process": [
+        "Initial consultation and requirements analysis",
+        "Preparing initial plans and designs",
+        "Material and color selection",
+        "Implementation and project supervision",
+        "Final delivery and follow-up"
+      ],
+      "examples": [
+        "Luxury restaurant design",
+        "Modern cafe coordination",
+        "Office space development",
+        "Luxury home design",
+        "Commercial center development"
+      ]
+    },
+    "exteriorDesign": {
+      "title": "Exterior Design",
+      "description": "We design attractive exterior facades that reflect brand identity",
+      "details": [
+        "Distinctive exterior facade design",
+        "Appropriate material selection for environment",
+        "Applying latest construction technologies",
+        "Energy efficiency improvement",
+        "Harmony with surrounding environment"
+      ],
+      "fullDescription": "We design attractive exterior facades that reflect brand identity and attract customers. We use the latest materials and technologies to ensure quality and sustainability. We care about harmony with the surrounding environment and energy efficiency improvement.",
+      "features": [
+        "Innovative exterior facade design",
+        "Appropriate material selection",
+        "Modern construction technology application",
+        "Energy efficiency improvement",
+        "Environmental harmony"
+      ],
+      "process": [
+        "Site and surrounding environment study",
+        "Initial design preparation",
+        "Material and technology selection",
+        "Implementation and supervision",
+        "Delivery and follow-up"
+      ],
+      "examples": [
+        "Attractive restaurant facades",
+        "Exterior cafe design",
+        "Commercial center development",
+        "Office building design",
+        "Residential project development"
+      ]
+    },
+    "urbanPlanning": {
+      "title": "Urban Planning",
+      "description": "We plan cities and communities in a sustainable and innovative way",
+      "details": [
+        "Comprehensive city and community planning",
+        "Infrastructure development",
+        "Quality of life improvement",
+        "Environmental sustainability",
+        "Economic development"
+      ],
+      "fullDescription": "We plan cities and communities in a sustainable and innovative way that considers current and future population needs. We focus on improving quality of life, environmental sustainability, and economic development.",
+      "features": [
+        "Comprehensive city planning",
+        "Infrastructure development",
+        "Quality of life improvement",
+        "Environmental sustainability",
+        "Economic development"
+      ],
+      "process": [
+        "Current situation study",
+        "Needs analysis",
+        "Comprehensive plan preparation",
+        "Gradual implementation",
+        "Follow-up and evaluation"
+      ],
+      "examples": [
+        "New city planning",
+        "Residential neighborhood development",
+        "Commercial center development",
+        "Industrial area planning",
+        "Tourist resort development"
+      ]
+    },
+    "landscapeDesign": {
+      "title": "Landscape Design",
+      "description": "We design beautiful outdoor spaces that harmonize with the environment",
+      "details": [
+        "Garden and green space design",
+        "Appropriate plant selection",
+        "Sustainability principles application",
+        "Air quality improvement",
+        "Creating comfortable and beautiful environment"
+      ],
+      "fullDescription": "We design beautiful outdoor spaces that harmonize with the natural environment. We focus on sustainability and improving quality of life through green spaces and innovative gardens.",
+      "features": [
+        "Innovative garden design",
+        "Appropriate plant selection",
+        "Sustainability principles application",
+        "Air quality improvement",
+        "Creating comfortable environment"
+      ],
+      "process": [
+        "Site and climate study",
+        "Design preparation",
+        "Plant selection",
+        "Implementation and planting",
+        "Maintenance and follow-up"
+      ],
+      "examples": [
+        "Public gardens",
+        "Residential gardens",
+        "Recreational parks",
+        "Commercial gardens",
+        "Urban green spaces"
+      ]
+    },
+    "brandDevelopment": {
+      "title": "Brand Development",
+      "description": "We develop strong and distinctive visual identity for brands",
+      "details": [
+        "Visual identity development",
+        "Logo design",
+        "Identity guide preparation",
+        "Marketing material development",
+        "Brand image building"
+      ],
+      "fullDescription": "We develop strong and distinctive visual identity for brands that helps them stand out in the market and build strong relationships with customers. We focus on creativity and innovation in every detail.",
+      "features": [
+        "Visual identity development",
+        "Logo design",
+        "Identity guide preparation",
+        "Marketing material development",
+        "Brand image building"
+      ],
+      "process": [
+        "Brand study",
+        "Strategy preparation",
+        "Design development",
+        "Identity guide preparation",
+        "Application and follow-up"
+      ],
+      "examples": [
+        "Innovative logos",
+        "Integrated visual identity",
+        "Marketing materials",
+        "Websites",
+        "Mobile applications"
+      ]
+    },
+    "marketingConsulting": {
+      "title": "Marketing Consulting",
+      "description": "We provide specialized marketing consultations for business growth",
+      "details": [
+        "Market and competitor analysis",
+        "Marketing strategy development",
+        "Sales improvement",
+        "Public relations management",
+        "Advertising campaign development"
+      ],
+      "fullDescription": "We provide specialized marketing consultations that help companies grow their business and increase sales. We focus on innovative strategies and practical solutions.",
+      "features": [
+        "Market analysis",
+        "Strategy development",
+        "Sales improvement",
+        "Public relations management",
+        "Campaign development"
+      ],
+      "process": [
+        "Current situation analysis",
+        "Market study",
+        "Strategy preparation",
+        "Implementation and follow-up",
+        "Evaluation and development"
+      ],
+      "examples": [
+        "Marketing strategies",
+        "Advertising campaigns",
+        "Sales improvement",
+        "Public relations management",
+        "Brand development"
+      ]
+    }
+  },
+  "about": {
+    "title": "About Us",
+    "subtitle": "Tramuz Design & Consulting Company",
+    "description": "Tramuz is a leading Saudi company specialized in design and consulting for restaurants, cafes, and commercial projects. The company was established to provide innovative and distinguished solutions that meet the needs of the growing Saudi market.",
+    "vision": "To be the leading company in design and consulting in Saudi Arabia and the region, with focus on innovation, quality, and sustainability.",
+    "mission": "Providing integrated and innovative design and consulting solutions that meet our clients' needs and help them achieve their business and investment goals.",
+    "goal": "Developing distinguished projects that add real value to society and local economy, while maintaining the highest standards of quality and sustainability.",
+    "team": {
+      "title": "Our Team",
+      "description": "We are a team of specialized engineers, designers, and consultants with extensive experience in various fields of design and consulting."
+    },
+    "excellence": "We are committed to the highest standards of quality and excellence in all our projects, with focus on innovation, sustainability, and complete customer satisfaction.",
+    "badge": "Learn More About Us",
+    "story": {
+      "title": "Our Story",
+      "description": "Tramuz is a leading and ambitious company in the design and consulting sector, specialized in interior and exterior design, urban planning, landscape design, and brand development. Tramuz started from Riyadh and its reputation spread throughout the Kingdom until it achieved successes and built distinguished relationships with its clients."
+    },
+    "visionMission": {
+      "title": "Our Vision and Mission",
+      "vision": {
+        "title": "Vision",
+        "description": "Creating innovative spaces that inspire and transform communities"
+      },
+      "mission": {
+        "title": "Mission",
+        "description": "Utilizing unique minds, ideas, and plans to provide creative solutions that lead us and our clients to success"
+      }
+    },
+    "values": {
+      "title": "Our Core Values",
+      "items": [
+        {
+          "icon": "⏰",
+          "title": "Commitment",
+          "description": "To time, promises, and integrity"
+        },
+        {
+          "icon": "⭐",
+          "title": "Quality",
+          "description": "A general culture at the highest level"
+        },
+        {
+          "icon": "💡",
+          "title": "Creativity",
+          "description": "And innovation to leave a distinctive mark"
+        },
+        {
+          "icon": "🚀",
+          "title": "Excellence",
+          "description": "Innovative and smart solutions"
+        }
+      ]
+    },
+    "whyChooseUs": {
+      "title": "Why Choose Us?",
+      "features": [
+        {
+          "icon": "🎨",
+          "title": "Unlimited Creativity",
+          "description": "We create unique designs that suit your needs"
+        },
+        {
+          "icon": "⚡",
+          "title": "Fast and Accurate Execution",
+          "description": "We commit to deadlines and ensure high quality"
+        },
+        {
+          "icon": "🤝",
+          "title": "True Partnership",
+          "description": "We work as true partners with our clients to achieve their goals and vision"
+        }
+      ]
+    }
+  },
+  "stats": {
+    "completedProjects": "Completed Projects",
+    "yearsExperience": "Years Experience",
+    "satisfiedClients": "Satisfied Clients",
+    "teamMembers": "Team Members",
+    "badge": "Our Achievements in Numbers",
+    "description": "Numbers that speak about our quality and excellence in design and consulting",
+    "items": [
+      {
+        "number": "150+",
+        "label": "Completed Projects",
+        "description": "Diverse projects in design and consulting"
+      },
+      {
+        "number": "98%",
+        "label": "Customer Satisfaction",
+        "description": "High satisfaction rate from our valued clients"
+      },
+      {
+        "number": "8+",
+        "label": "Years Experience",
+        "description": "Extensive experience in design and consulting"
+      },
+      {
+        "number": "24/7",
+        "label": "Technical Support",
+        "description": "Continuous support for all our clients"
+      }
+    ]
+  },
+  "works": {
+    "title": "Our Works",
+    "subtitle": "Our Distinguished Projects",
+    "viewAll": "View All",
+    "badge": "Our Works Gallery",
+    "tabs": [
+      "All Projects",
+      "Exterior Design",
+      "Interior Design",
+      "Implementation Plans",
+      "Visual Identity"
+    ],
+    "categories": {
+      "all": "All",
+      "restaurants": "Restaurants",
+      "cafes": "Cafes",
+      "commercial": "Commercial",
+      "residential": "Residential"
+    },
+    "projects": [
+      {
+        "title": "Luxury Restaurant Design in Riyadh",
+        "description": "A luxury restaurant design project that combines authenticity and modernity in the heart of Riyadh",
+        "year": "2024",
+        "category": "interior"
+      },
+      {
+        "title": "Modern Cafe in Jeddah",
+        "description": "A modern cafe design that meets youth needs in Jeddah",
+        "year": "2024",
+        "category": "exterior"
+      },
+      {
+        "title": "Integrated Commercial Center",
+        "description": "Development of an integrated commercial center in Riyadh",
+        "year": "2023",
+        "category": "planning"
+      },
+      {
+        "title": "Red Sea Restaurant",
+        "description": "A distinctive marine restaurant design in Jeddah",
+        "year": "2023",
+        "category": "interior"
+      },
+      {
+        "title": "Cafe Coffee",
+        "description": "A luxury cafe in Dammam",
+        "year": "2023",
+        "category": "exterior"
+      },
+      {
+        "title": "Jeddah Commercial Complex",
+        "description": "Development of an integrated commercial complex in Jeddah",
+        "year": "2022",
+        "category": "planning"
+      }
+    ],
+    "cta": {
+      "title": "Start Your Project With Us",
+      "description": "Let us help you transform your vision into an amazing reality through our distinguished services",
+      "button": "Start Now"
+    }
+  },
+  "clients": {
+    "title": "Our Clients",
+    "subtitle": "Success Partners",
+    "badge": "Success Partners",
+    "list": [
+      "Al-Asalah Restaurant",
+      "Al-Nakheel Cafe",
+      "Riyadh Commercial Center",
+      "Red Sea Restaurant",
+      "Cafe Coffee",
+      "Jeddah Commercial Complex"
+    ],
+    "categories": [
+      {
+        "title": "Restaurants and Cafes",
+        "clients": [
+          "Al-Asalah Restaurant",
+          "Al-Nakheel Cafe",
+          "Red Sea Restaurant",
+          "Cafe Coffee"
+        ]
+      },
+      {
+        "title": "Commercial Centers",
+        "clients": [
+          "Riyadh Commercial Center",
+          "Jeddah Commercial Complex",
+          "Dammam Central Market"
+        ]
+      },
+      {
+        "title": "Residential Projects",
+        "clients": [
+          "Al-Nakheel Residential Complex",
+          "New Riyadh Neighborhood",
+          "Jeddah Residential Project"
+        ]
+      }
+    ]
+  },
+  "success": {
+    "title": "Success Stories",
+    "subtitle": "Inspiring Success Stories",
+    "badge": "Our Clients' Opinions",
+    "stories": {
+      "title": "Success Stories",
+      "description": "We are proud of our clients' successes and share with you their distinguished achievement stories"
+    },
+    "shareOpinion": {
+      "title": "Share Your Opinion",
+      "description": "We value our clients' opinions and continuously work to improve our services"
+    },
+    "stories": [
+      {
+        "title": "Al-Asalah Restaurant - Inspiring Success Story",
+        "description": "We helped Al-Asalah Restaurant increase its sales by 150% through innovative interior design and effective marketing strategy.",
+        "result": "150% Sales Increase"
+      },
+      {
+        "title": "Al-Nakheel Cafe - Radical Transformation",
+        "description": "We developed a new visual identity for Al-Nakheel Cafe that helped it stand out in the market and attract new customers.",
+        "result": "200% Customer Increase"
+      }
+    ],
+    "testimonials": [
+      {
+        "name": "Ahmed Mohammed",
+        "position": "Owner of Al-Asalah Restaurant",
+        "content": "Our experience with Tramuz company was exceptional. They helped us transform our restaurant into a distinguished destination in Riyadh. The design and supervision were at the highest level.",
+        "rating": 5
+      },
+      {
+        "name": "Fatima Al-Saeed",
+        "position": "Manager of Al-Nakheel Cafe",
+        "content": "Tramuz team is very professional. They helped us develop our visual identity and significantly increase our customer base. I recommend working with them.",
+        "rating": 5
+      },
+      {
+        "name": "Khalid Al-Otaibi",
+        "position": "Real Estate Developer",
+        "content": "Tramuz company is distinguished by creativity and quality. They helped us develop our residential and commercial projects. We look forward to cooperating with them in future projects.",
+        "rating": 5
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "We're Here to Serve You",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "sendMessage": "Send Message",
+    "phoneNumber": "+966 55 050 0410",
+    "emailAddress": "info@tramuz.com",
+    "addressText": "Riyadh, Saudi Arabia",
+    "badge": "We're Here to Help You",
+    "info": {
+      "title": "Contact Information",
+      "phone": {
+        "label": "Phone",
+        "value": "+966 55 050 0410"
+      },
+      "email": {
+        "label": "Email",
+        "value": "info@tramuz.com"
+      },
+      "address": {
+        "label": "Address",
+        "value": "Riyadh, Saudi Arabia"
+      }
+    },
+    "form": {
+      "title": "Send Us a Message",
+      "subtitle": "We will contact you within 24 hours",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "message": "Message",
+      "send": "Send Message"
+    }
+  },
+  "footer": {
+    "companyDescription": "Tramuz Design & Consulting Company - We provide innovative and distinguished solutions for restaurants, cafes, and commercial projects",
+    "quickLinks": "Quick Links",
+    "ourServices": "Our Services",
+    "followUs": "Follow Us",
+    "allRightsReserved": "All Rights Reserved",
+    "services": [
+      "Interior Design",
+      "Exterior Design",
+      "Urban Planning",
+      "Landscape Design",
+      "Brand Development",
+      "Marketing Consulting"
+    ],
+    "company": {
+      "name": "Tramuz",
+      "description": "Tramuz Design & Consulting Company - We provide innovative and distinguished solutions for restaurants, cafes, and commercial projects in Saudi Arabia",
+      "services": [
+        "Interior Design",
+        "Exterior Design",
+        "Urban Planning",
+        "Landscape Design",
+        "Brand Development",
+        "Marketing Consulting"
+      ]
+    },
+    "links": {
+      "quickLinks": "Quick Links",
+      "ourServices": "Our Services",
+      "followUs": "Follow Us"
+    },
+    "copyright": "All Rights Reserved © 2024 Tramuz Design & Consulting Company"
+  },
+  "cart": {
+    "title": "Cart",
+    "empty": "Cart is Empty",
+    "addServices": "Add your favorite services to cart",
+    "quantity": "Quantity",
+    "total": "Total",
+    "completeOrder": "Complete Order via WhatsApp",
+    "remove": "Remove"
+  },
+  "language": {
+    "arabic": "العربية",
+    "english": "English"
+  }
+}

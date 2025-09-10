@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Play, Users, Award, Sparkles, Phone, Mail, MapPin, X, ArrowRight, ArrowLeft, Globe, Zap, Target, Heart, Star } from 'lucide-react';
+import { ChevronDown, Play, Users, Award, Sparkles, Phone, Mail, MapPin, X, ArrowRight, ArrowLeft, Globe, Zap, Target, Heart, Star, ShoppingCart, Plus, Minus, Trash2, Languages } from 'lucide-react';
+import arTranslations from '../locales/ar.json';
+import enTranslations from '../locales/en.json';
+import heroImg1 from '../images/hero/hero-1.jpg';
+import heroImg2 from '../images/hero/hero-2.jpg';
+import heroImg3 from '../images/hero/hero-3.jpg';
+import { firestore } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const TramuzWebsite = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -8,7 +15,26 @@ const TramuzWebsite = () => {
   const [scrolled, setScrolled] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [language, setLanguage] = useState('ar');
+  const [isRTL, setIsRTL] = useState(true);
+  const [remoteContent, setRemoteContent] = useState(null);
+  const [remoteSections, setRemoteSections] = useState(null);
+
+  // Translation function
+  const t = (key) => {
+    const translations = language === 'ar' ? arTranslations : enTranslations;
+    const keys = key.split('.');
+    let value = translations;
+    
+    for (const k of keys) {
+      value = value?.[k];
+    }
+    
+    return value || key;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -36,270 +62,142 @@ const TramuzWebsite = () => {
     };
   }, [isModalOpen]);
 
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const ref = doc(firestore, 'websiteContent', 'hero');
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setRemoteContent(snap.data());
+        }
+        const sectionsRef = doc(firestore, 'websiteContent', 'sections');
+        const sectionsSnap = await getDoc(sectionsRef);
+        if (sectionsSnap.exists()) {
+          setRemoteSections(sectionsSnap.data());
+        }
+      } catch (err) {
+        console.warn('Failed to fetch remote content', err);
+      }
+    };
+    fetchContent();
+  }, []);
+
   const heroSlides = [
     {
-      title: "مرحبًا بكم في شركة ترمُز",
-      subtitle: "هندسة وإبداع بصري",
-      description: "رحلتك من التخطيط إلى التميز",
-      image: require('../images/hero/hero-1.jpg'),
-      accent: "from-stone-300 to-stone-100"
+      title: remoteContent?.[language]?.title || t('hero.title'),
+      subtitle: remoteContent?.[language]?.subtitle || t('hero.subtitle'),
+      description: remoteContent?.[language]?.description || t('hero.description'),
+      image: heroImg1,
+      accent: 'from-emerald-100 to-teal-100',
     },
     {
-      title: "مرحبًا بكم في شركة ترمُز",
-      subtitle: "هندسة وإبداع بصري",
-      description: "رحلتك من التخطيط إلى التميز",
-      image: require('../images/hero/hero-2.jpg'),
-      accent: "from-stone-200 to-stone-50"
+      title: t('hero.slides.1.title'),
+      subtitle: t('hero.slides.1.subtitle'),
+      description: t('hero.slides.1.description'),
+      image: heroImg2,
+      accent: 'from-teal-100 to-cyan-100',
     },
     {
-      title: "مرحبًا بكم في شركة ترمُز",
-      subtitle: "هندسة وإبداع بصري",
-      description: "رحلتك من التخطيط إلى التميز",
-      image: require('../images/hero/hero-3.jpg'),
-      accent: "from-stone-300 to-stone-100"
-    }
+      title: t('hero.slides.2.title'),
+      subtitle: t('hero.slides.2.subtitle'),
+      description: t('hero.slides.2.description'),
+      image: heroImg3,
+      accent: 'from-emerald-200 to-teal-200',
+    },
   ];
 
-    const services = [
+  const sectionTitle = (key, fallbackKey) => remoteSections?.[key]?.[language]?.title || t(fallbackKey);
+
+  const services = [
     { 
-      title: "التصميم الداخلي", 
-      description: "نحول فن التصميم الداخلي إلى واقع ملموس يضيف قيمة وجمال لكل مساحة", 
+      id: 1,
+      title: t('services.interiorDesign.title'), 
+      description: t('services.interiorDesign.description'), 
+      price: 5000,
       icon: <Sparkles size={28} />, 
-      gradient: "from-purple-500 via-blue-500 to-cyan-500", 
-      bgGradient: "from-purple-50 via-blue-50 to-cyan-50", 
-      hoverGradient: "from-purple-600 via-blue-600 to-cyan-600",
-      details: [
-        "تصاميم عملية وأنيقة تعكس هوية العملاء",
-        "اختيار الألوان والإضاءة بعناية",
-        "توزيع الأثاث لتحقيق الانسجام والراحة",
-        "تحويل الأفكار إلى تجارب معيشية ملهمة",
-        "اهتمام بأدق التفاصيل"
-      ],
-      fullDescription: "في شركتنا، نحول فن التصميم الداخلي إلى واقع ملموس يضيف قيمة وجمال لكل مساحة. نبتكر تصاميم عملية وأنيقة تعكس هوية عملائنا وتلبي احتياجاتهم بدقة. نهتم بأدق التفاصيل من اختيار الألوان والإضاءة إلى توزيع الأثاث لتحقيق الانسجام والراحة. هدفنا هو تحويل كل فكرة إلى تجربة معيشية ملهمة ومتكاملة.",
-      features: [
-        "تصميم مساحات داخلية مبتكرة",
-        "اختيار الألوان والإضاءة المناسبة",
-        "توزيع الأثاث والديكورات",
-        "تصميم مطابخ ومطاعم متخصصة",
-        "تصميم مقاهي ومساحات تجارية",
-        "استخدام مواد عالية الجودة",
-        "تطبيق أحدث الاتجاهات في التصميم",
-        "ضمان الوظيفية والجمالية"
-      ],
-      process: [
-        "دراسة المساحة والمتطلبات",
-        "تطوير المفهوم التصميمي",
-        "اختيار المواد والألوان",
-        "إعداد المخططات التنفيذية",
-        "متابعة التنفيذ والجودة"
-      ],
-      examples: [
-        "تصميم مطاعم ومقاهي",
-        "تصميم مساحات تجارية",
-        "تصميم منازل وفلل",
-        "تصميم مكاتب وشركات",
-        "تصميم فنادق ومنتجعات"
-      ]
+      gradient: "from-slate-600 via-slate-700 to-slate-800", 
+      bgGradient: "from-slate-50 to-slate-100", 
+      hoverGradient: "from-slate-700 via-slate-800 to-slate-900",
+      details: t('services.interiorDesign.details'),
+      fullDescription: t('services.interiorDesign.fullDescription'),
+      features: t('services.interiorDesign.features'),
+      process: t('services.interiorDesign.process'),
+      examples: t('services.interiorDesign.examples')
     },
     { 
-      title: "التصميم الخارجي", 
-      description: "نحول التصميم الخارجي إلى بصمة معمارية مميزة تجمع بين الجمال والوظيفة", 
+      id: 2,
+      title: t('services.exteriorDesign.title'), 
+      description: t('services.exteriorDesign.description'), 
+      price: 8000,
       icon: <Target size={28} />, 
-      gradient: "from-emerald-500 via-teal-500 to-cyan-500", 
-      bgGradient: "from-emerald-50 to-teal-50", 
-      hoverGradient: "from-emerald-600 to-teal-600",
-      details: [
-        "تصميم واجهات مميزة",
-        "تخطيط المناظر الخارجية",
-        "مزج الحداثة والأصالة",
-        "إبراز هوية المشروع",
-        "تصميمات خالدة عبر الزمن"
-      ],
-      fullDescription: "نحول التصميم الخارجي إلى بصمة معمارية مميزة تجمع بين الجمال والوظيفة. نهتم بكل تفاصيل الواجهات والمناظر الخارجية لنخلق انسجامًا مع المحيط وإبراز هوية المشروع. نمزج بين الحداثة والأصالة لنصمم مبانٍ تعكس شخصية العملاء وتبقى خالدة عبر الزمن. هدفنا هو أن يكون كل تصميم خارجي علامة فارقة تُلهم وتلفت الأنظار.",
-      features: [
-        "تصميم واجهات المباني",
-        "تخطيط المناظر الخارجية",
-        "تصميم مداخل ومساحات مفتوحة",
-        "استخدام مواد مستدامة",
-        "دمج العناصر الطبيعية",
-        "تصميم إضاءة خارجية",
-        "تخطيط مواقف السيارات",
-        "تصميم حدائق ومساحات خضراء"
-      ],
-      process: [
-        "دراسة الموقع والبيئة المحيطة",
-        "تطوير المفهوم المعماري",
-        "تصميم الواجهات والمناظر",
-        "اختيار المواد والإنشاءات",
-        "متابعة التنفيذ والجودة"
-      ],
-      examples: [
-        "تصميم واجهات المطاعم",
-        "تصميم مباني تجارية",
-        "تصميم مجمعات سكنية",
-        "تصميم مشاريع سياحية",
-        "تصميم مؤسسات تعليمية"
-      ]
+      gradient: "from-emerald-600 via-emerald-700 to-emerald-800", 
+      bgGradient: "from-emerald-50 to-emerald-100", 
+      hoverGradient: "from-emerald-700 via-emerald-800 to-emerald-900",
+      details: t('services.exteriorDesign.details'),
+      fullDescription: t('services.exteriorDesign.fullDescription'),
+      features: t('services.exteriorDesign.features'),
+      process: t('services.exteriorDesign.process'),
+      examples: t('services.exteriorDesign.examples')
     },
     { 
-      title: "التخطيط الحضري", 
-      description: "بناء تجارب حضرية تتمحور حول الإنسان", 
+      id: 3,
+      title: t('services.urbanPlanning.title'), 
+      description: t('services.urbanPlanning.description'), 
+      price: 12000,
       icon: <Zap size={28} />, 
-      gradient: "from-orange-500 via-amber-500 to-yellow-500", 
-      bgGradient: "from-orange-50 to-amber-50", 
-      hoverGradient: "from-orange-600 to-amber-600",
-      details: [
-        "تخطيط مساحات حضرية متكاملة",
-        "تصميم تجارب إنسانية متميزة",
-        "دمج الطبيعة مع البيئة الحضرية",
-        "تطوير حلول مستدامة",
-        "تحسين جودة الحياة"
-      ],
-      fullDescription: "نركز على بناء تجارب حضرية تتمحور حول الإنسان، حيث نضع احتياجات المجتمع في المقدمة ونصمم مساحات تعزز التفاعل الاجتماعي والرفاهية. نعمل على تطوير حلول تخطيطية ذكية ومستدامة تحقق التوازن بين التطور الحضري والحفاظ على البيئة.",
-      features: [
-        "تخطيط المجمعات السكنية",
-        "تصميم الأحياء التجارية",
-        "تطوير المساحات العامة",
-        "تخطيط النقل والمواصلات",
-        "تصميم الحدائق والمساحات الخضراء",
-        "تطوير البنية التحتية",
-        "تخطيط المرافق العامة",
-        "تصميم حلول مستدامة"
-      ],
-      process: [
-        "دراسة المجتمع والاحتياجات",
-        "تحليل الموقع والبيئة",
-        "تطوير المفهوم التخطيطي",
-        "تصميم الحلول المقترحة",
-        "متابعة التنفيذ والتطوير"
-      ],
-      examples: [
-        "تخطيط المجمعات السكنية",
-        "تصميم الأحياء التجارية",
-        "تطوير المساحات العامة",
-        "تخطيط النقل والمواصلات",
-        "تصميم الحدائق والمساحات الخضراء"
-      ]
+      gradient: "from-amber-600 via-amber-700 to-amber-800", 
+      bgGradient: "from-amber-50 to-amber-100", 
+      hoverGradient: "from-amber-700 via-amber-800 to-amber-900",
+      details: t('services.urbanPlanning.details'),
+      fullDescription: t('services.urbanPlanning.fullDescription'),
+      features: t('services.urbanPlanning.features'),
+      process: t('services.urbanPlanning.process'),
+      examples: t('services.urbanPlanning.examples')
     },
     { 
-      title: "تصميم المناظر الطبيعية", 
-      description: "إنشاء مساحات خضراء ملهمة", 
+      id: 4,
+      title: t('services.landscapeDesign.title'), 
+      description: t('services.landscapeDesign.description'), 
+      price: 6000,
       icon: <Globe size={28} />, 
-      gradient: "from-green-500 via-emerald-500 to-teal-500", 
-      bgGradient: "from-green-50 to-emerald-50", 
-      hoverGradient: "from-green-600 to-emerald-600",
-      details: [
-        "تصميم حدائق ومساحات خضراء",
-        "دمج الطبيعة مع البيئة المبنية",
-        "تطوير حلول مستدامة",
-        "تحسين جودة الهواء والبيئة",
-        "إنشاء مساحات ترفيهية طبيعية"
-      ],
-      fullDescription: "نركز على إنشاء مساحات خضراء ملهمة تجمع بين الجمال الطبيعي والوظيفية العملية. نعمل على تطوير حلول تصميمية مستدامة تحسن جودة الحياة وتوفر بيئة صحية ومريحة للجميع.",
-      features: [
-        "تصميم الحدائق العامة",
-        "تخطيط المساحات الخضراء",
-        "تصميم المتنزهات والحدائق",
-        "تطوير الحلول المستدامة",
-        "تصميم المساحات الترفيهية",
-        "تخطيط النظم البيئية",
-        "تصميم الحدائق المنزلية",
-        "تطوير المساحات الخضراء الحضرية"
-      ],
-      process: [
-        "دراسة الموقع والبيئة",
-        "تطوير المفهوم التصميمي",
-        "اختيار النباتات والمواد",
-        "تصميم النظام البيئي",
-        "متابعة التنفيذ والصيانة"
-      ],
-      examples: [
-        "تصميم الحدائق العامة",
-        "تخطيط المساحات الخضراء",
-        "تصميم المتنزهات والحدائق",
-        "تطوير الحلول المستدامة",
-        "تصميم المساحات الترفيهية"
-      ]
+      gradient: "from-teal-600 via-teal-700 to-teal-800", 
+      bgGradient: "from-teal-50 to-teal-100", 
+      hoverGradient: "from-teal-700 via-teal-800 to-teal-900",
+      details: t('services.landscapeDesign.details'),
+      fullDescription: t('services.landscapeDesign.fullDescription'),
+      features: t('services.landscapeDesign.features'),
+      process: t('services.landscapeDesign.process'),
+      examples: t('services.landscapeDesign.examples')
     },
     { 
-      title: "تطوير العلامات التجارية", 
-      description: "بناء وتطوير العلامات التجارية اعتمادًا على هوية واضحة وقيم أساسية", 
+      id: 5,
+      title: t('services.brandDevelopment.title'), 
+      description: t('services.brandDevelopment.description'), 
+      price: 3000,
       icon: <Heart size={28} />, 
-      gradient: "from-pink-500 via-rose-500 to-red-500", 
-      bgGradient: "from-pink-50 to-rose-50", 
-      hoverGradient: "from-pink-600 to-rose-600",
-      details: [
-        "تطوير هوية بصرية متكاملة",
-        "استراتيجية علامة تجارية واضحة",
-        "تصميم شعارات مميزة",
-        "تطوير تجربة عميل متكاملة",
-        "بناء قيم أساسية للعلامة"
-      ],
-      fullDescription: "نقدم خدمات تطوير العلامات التجارية الشاملة التي تشمل بناء هوية بصرية قوية، تطوير استراتيجية تسويقية واضحة، وتصميم تجربة عميل متكاملة. نعمل على إبراز شخصية العلامة التجارية وتمييزها في السوق.",
-      features: [
-        "تطوير الهوية البصرية",
-        "تصميم الشعارات والرموز",
-        "تطوير دليل الهوية التجارية",
-        "تصميم المواد التسويقية",
-        "تطوير استراتيجية العلامة التجارية",
-        "تصميم مواقع إلكترونية",
-        "تطوير تجربة العميل",
-        "إدارة سمعة العلامة التجارية"
-      ],
-      process: [
-        "دراسة السوق والمنافسين",
-        "تطوير استراتيجية العلامة التجارية",
-        "تصميم الهوية البصرية",
-        "تطوير المواد التسويقية",
-        "تنفيذ الاستراتيجية ومتابعتها"
-      ],
-      examples: [
-        "تطوير علامات تجارية للمطاعم",
-        "تطوير هوية بصرية للشركات",
-        "تصميم شعارات مبتكرة",
-        "تطوير تجربة العملاء",
-        "إدارة سمعة العلامات التجارية"
-      ]
+      gradient: "from-rose-600 via-rose-700 to-rose-800", 
+      bgGradient: "from-rose-50 to-rose-100", 
+      hoverGradient: "from-rose-700 via-rose-800 to-rose-900",
+      details: t('services.brandDevelopment.details'),
+      fullDescription: t('services.brandDevelopment.fullDescription'),
+      features: t('services.brandDevelopment.features'),
+      process: t('services.brandDevelopment.process'),
+      examples: t('services.brandDevelopment.examples')
     },
     { 
-      title: "استشارات تسويقية", 
-      description: "إجراء مراجعات شاملة لاستراتيجيات التسويق الحالية وتطوير خطط إبداعية وعملية", 
+      id: 6,
+      title: t('services.marketingConsulting.title'), 
+      description: t('services.marketingConsulting.description'), 
+      price: 4000,
       icon: <Users size={28} />, 
-      gradient: "from-blue-500 via-indigo-500 to-purple-500", 
-      bgGradient: "from-blue-50 to-indigo-50", 
-      hoverGradient: "from-blue-600 to-indigo-600",
-      details: [
-        "مراجعة استراتيجيات التسويق الحالية",
-        "تطوير خطط تسويقية إبداعية",
-        "تحليل السوق والمنافسين",
-        "تطوير استراتيجيات المبيعات",
-        "تحسين تجربة العملاء"
-      ],
-      fullDescription: "نقدم استشارات تسويقية شاملة تساعد الشركات على تحسين أدائها التسويقي وزيادة المبيعات. نعمل على تطوير استراتيجيات تسويقية إبداعية وعملية تعزز المبيعات والإيرادات والرضا العام.",
-      features: [
-        "تحليل السوق والمنافسين",
-        "تطوير استراتيجيات التسويق",
-        "تصميم الحملات الإعلانية",
-        "تحسين تجربة العملاء",
-        "تطوير استراتيجيات المبيعات",
-        "تحليل البيانات والتقارير",
-        "تطوير المحتوى التسويقي",
-        "إدارة العلاقات العامة"
-      ],
-      process: [
-        "تحليل الوضع الحالي",
-        "تطوير الاستراتيجية",
-        "تنفيذ الخطة",
-        "متابعة النتائج",
-        "التطوير المستمر"
-      ],
-      examples: [
-        "استشارات تسويقية للمطاعم",
-        "تطوير استراتيجيات المبيعات",
-        "تحسين تجربة العملاء",
-        "تطوير الحملات الإعلانية",
-        "إدارة العلاقات العامة"
-      ]
+      gradient: "from-indigo-600 via-indigo-700 to-indigo-800", 
+      bgGradient: "from-indigo-50 to-indigo-100", 
+      hoverGradient: "from-indigo-700 via-indigo-800 to-indigo-900",
+      details: t('services.marketingConsulting.details'),
+      fullDescription: t('services.marketingConsulting.fullDescription'),
+      features: t('services.marketingConsulting.features'),
+      process: t('services.marketingConsulting.process'),
+      examples: t('services.marketingConsulting.examples')
     },
     { 
       title: "استشارات تشغيلية", 
@@ -546,35 +444,35 @@ const TramuzWebsite = () => {
   const stats = [
     { 
       number: "150+", 
-      label: "مشروع مكتمل", 
-      description: "مشاريع متنوعة في التصميم والاستشارات",
+      label: t('stats.completedProjects'), 
+      description: t('stats.items.0.description'),
       icon: <Target size={40} />, 
-      color: "from-emerald-500 to-teal-500",
-      bgColor: "from-emerald-500/10 to-teal-500/10"
+      color: "from-slate-600 to-slate-800",
+      bgColor: "from-slate-100 to-slate-200"
     },
     { 
       number: "98%", 
-      label: "رضا العملاء", 
-      description: "نسبة رضا عالية من عملائنا الكرام",
+      label: t('stats.satisfiedClients'), 
+      description: t('stats.items.1.description'),
       icon: <Heart size={40} />, 
-      color: "from-rose-500 to-pink-500",
-      bgColor: "from-rose-500/10 to-pink-500/10"
+      color: "from-emerald-600 to-emerald-800",
+      bgColor: "from-emerald-100 to-emerald-200"
     },
     { 
       number: "8+", 
-      label: "سنوات خبرة", 
-      description: "خبرة واسعة في التصميم والاستشارات",
+      label: t('stats.yearsExperience'), 
+      description: t('stats.items.2.description'),
       icon: <Award size={40} />, 
-      color: "from-blue-500 to-cyan-500",
-      bgColor: "from-blue-500/10 to-cyan-500/10"
+      color: "from-amber-600 to-amber-800",
+      bgColor: "from-amber-100 to-amber-200"
     },
     { 
       number: "24/7", 
-      label: "دعم فني", 
-      description: "دعم مستمر لجميع عملائنا",
+      label: t('stats.items.3.label'), 
+      description: t('stats.items.3.description'),
       icon: <Zap size={40} />, 
-      color: "from-amber-500 to-orange-500",
-      bgColor: "from-amber-500/10 to-orange-500/10"
+      color: "from-teal-600 to-teal-800",
+      bgColor: "from-teal-100 to-teal-200"
     }
   ];
 
@@ -586,109 +484,196 @@ const TramuzWebsite = () => {
     setIsMenuOpen(false);
   };
 
+  // Cart functions
+  const addToCart = (service) => {
+    const existingItem = cart.find(item => item.id === service.id);
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.id === service.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCart([...cart, { ...service, quantity: 1 }]);
+    }
+  };
+
+  const removeFromCart = (serviceId) => {
+    setCart(cart.filter(item => item.id !== serviceId));
+  };
+
+  const updateQuantity = (serviceId, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(serviceId);
+    } else {
+      setCart(cart.map(item => 
+        item.id === serviceId 
+          ? { ...item, quantity: newQuantity }
+          : item
+      ));
+    }
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const getCartItemsCount = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const sendToWhatsApp = () => {
+    const message = language === 'ar' 
+      ? `مرحباً، أريد طلب الخدمات التالية من شركة ترمُز:
+
+${cart.map(item => `• ${item.title} - الكمية: ${item.quantity} - السعر: ${item.price} ريال`).join('\n')}
+
+المجموع الكلي: ${getCartTotal()} ريال
+
+شكراً لكم`
+      : `Hello, I would like to order the following services from Tramuz:
+
+${cart.map(item => `• ${item.title} - Quantity: ${item.quantity} - Price: ${item.price} SAR`).join('\n')}
+
+Total: ${getCartTotal()} SAR
+
+Thank you`;
+
+    const whatsappUrl = `https://wa.me/966551448433?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const toggleLanguage = () => {
+    const newLanguage = language === 'ar' ? 'en' : 'ar';
+    setLanguage(newLanguage);
+    setIsRTL(newLanguage === 'ar');
+    document.documentElement.dir = newLanguage === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = newLanguage;
+  };
+
   const navItems = [
-    { id: 'home', label: 'الرئيسية', icon: <Globe size={18} /> },
-    { id: 'about', label: 'من نحن', icon: <Heart size={18} /> },
-    { id: 'services', label: 'خدماتنا', icon: <Sparkles size={18} /> },
-    { id: 'works', label: 'معرض الأعمال', icon: <Play size={18} /> },
-    { id: 'team', label: 'الفريق', icon: <Users size={18} /> },
-    { id: 'testimonials', label: 'آراء العملاء', icon: <Award size={18} /> },
-    { id: 'contact', label: 'اتصل بنا', icon: <Phone size={18} /> }
+    { id: 'home', label: t('navigation.home'), icon: <Globe size={18} /> },
+    { id: 'about', label: t('navigation.about'), icon: <Heart size={18} /> },
+    { id: 'services', label: t('navigation.services'), icon: <Sparkles size={18} /> },
+    { id: 'works', label: t('navigation.works'), icon: <Play size={18} /> },
+    { id: 'team', label: t('navigation.clients'), icon: <Users size={18} /> },
+    { id: 'testimonials', label: t('success.badge'), icon: <Award size={18} /> },
+    { id: 'contact', label: t('navigation.contact'), icon: <Phone size={18} /> }
   ];
 
   return (
-    <div className="min-h-screen bg-stone-50" dir="rtl">
+    <div className="min-h-screen bg-slate-50" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Navigation */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
         scrolled 
-          ? 'bg-gradient-to-r from-white via-emerald-50/90 to-teal-50/90 backdrop-blur-xl shadow-2xl border-b border-emerald-400/60' 
-          : 'bg-gradient-to-r from-white/95 via-emerald-50/80 to-teal-50/80 backdrop-blur-lg shadow-xl'
+          ? 'bg-slate-900/95 backdrop-blur-xl shadow-lg border-b border-slate-700' 
+          : 'bg-slate-900/90 backdrop-blur-lg shadow-md'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-24">
-            {/* Logo */}
+          <div className="flex justify-between items-center h-20">
+            
+            {/* Logo Section */}
             <div className="flex items-center">
-              <div className="relative group">
+              <div className="relative group cursor-pointer">
                 <img 
                   src={require('../images/logo.png')} 
                   alt="TARMUZ - شركة التصميم والاستشارات" 
-                  className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 group-hover:scale-110 transition-transform duration-300 object-contain"
+                  className="h-12 w-auto group-hover:scale-105 transition-transform duration-300 object-contain"
                   style={{ 
-                    filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.15))',
-                    maxWidth: '100%',
-                    height: 'auto'
+                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))'
                   }}
                   onError={(e) => {
                     e.target.style.display = 'none';
                   }}
                 />
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full shadow-lg group-hover:scale-125 transition-transform duration-300"></div>
               </div>
             </div>
             
-            {/* Desktop Menu */}
-            <div className="hidden lg:flex items-center space-x-reverse space-x-2">
+            {/* Desktop Navigation Menu */}
+            <div className="hidden lg:flex items-center space-x-8">
               {navItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className={`group relative px-6 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-reverse space-x-3 ${
+                  className={`group relative px-4 py-2 font-medium transition-all duration-300 ${
                     activeSection === item.id 
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xl transform scale-105' 
-                      : 'text-gray-800 hover:text-emerald-700 hover:bg-gradient-to-r hover:from-emerald-100/80 hover:to-teal-100/80 hover:shadow-lg'
+                      ? 'text-emerald-400 border-b-2 border-emerald-400' 
+                      : 'text-slate-300 hover:text-emerald-400 hover:border-b-2 hover:border-emerald-500'
                   }`}
                 >
-                  <span className={`transition-all duration-300 ${activeSection === item.id ? 'scale-110 text-white' : 'group-hover:scale-110 group-hover:text-emerald-600'}`}>
-                    {item.icon}
+                  <span className="flex items-center space-x-2">
+                  <span className="text-sm">{item.label}</span>
                   </span>
-                  <span className="text-sm font-semibold">{item.label}</span>
-                  {activeSection === item.id && (
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gradient-to-r from-teal-400 to-emerald-400 rounded-full shadow-lg"></div>
-                  )}
                 </button>
               ))}
             </div>
 
+            {/* Right Side Actions */}
+            <div className="flex items-center space-x-4">
+              
+              {/* Language Toggle */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors duration-200"
+                title={t('navigation.language')}
+              >
+                <Languages size={18} className="text-slate-400" />
+                <span className="text-sm font-medium text-slate-300 hidden sm:block">
+                  {language === 'ar' ? 'EN' : 'ع'}
+                </span>
+              </button>
+
+              {/* Cart Button */}
+              <button
+                onClick={() => setIsCartOpen(!isCartOpen)}
+                className="relative p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors duration-200"
+              >
+                <ShoppingCart size={20} />
+                {getCartItemsCount() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {getCartItemsCount()}
+                  </span>
+                )}
+              </button>
+
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden relative p-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300"
-            >
-              <div className="relative w-6 h-6">
-                <span className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 ${
-                  isMenuOpen ? 'rotate-45 translate-y-2.5' : 'translate-y-1'
+                className="lg:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+              >
+                <div className="w-6 h-6 flex flex-col justify-center space-y-1">
+                  <span className={`block h-0.5 w-full bg-gray-600 transform transition-all duration-300 ${
+                    isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
                 }`}></span>
-                <span className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 translate-y-2.5 ${
+                  <span className={`block h-0.5 w-full bg-gray-600 transition-all duration-300 ${
                   isMenuOpen ? 'opacity-0' : 'opacity-100'
                 }`}></span>
-                <span className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 ${
-                  isMenuOpen ? '-rotate-45 translate-y-2.5' : 'translate-y-4'
+                  <span className={`block h-0.5 w-full bg-gray-600 transform transition-all duration-300 ${
+                    isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
                 }`}></span>
               </div>
             </button>
+            </div>
           </div>
         </div>
 
         {/* Mobile Menu */}
-        <div className={`lg:hidden transition-all duration-500 overflow-hidden ${
+        <div className={`lg:hidden transition-all duration-300 overflow-hidden ${
           isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="bg-gradient-to-r from-white via-emerald-50/95 to-teal-50/95 backdrop-blur-xl border-t border-emerald-300/60 shadow-2xl">
-            <div className="px-4 py-6 space-y-2">
+          <div className="bg-slate-900 border-t border-slate-700 shadow-lg">
+            <div className="px-4 py-4 space-y-1">
               {navItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className={`w-full flex items-center space-x-reverse space-x-3 px-6 py-4 rounded-2xl font-bold transition-all duration-300 ${
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                     activeSection === item.id 
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xl transform scale-105' 
-                      : 'text-gray-800 hover:bg-gradient-to-r hover:from-emerald-100/80 hover:to-teal-100/80 hover:text-emerald-700 hover:shadow-lg'
+                      ? 'bg-emerald-900/30 text-emerald-400 border-l-4 border-emerald-400' 
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-emerald-400'
                   }`}
                 >
-                  <span className={`transition-transform duration-300 ${activeSection === item.id ? 'scale-110' : 'group-hover:scale-110'}`}>
-                    {item.icon}
-                  </span>
-                  <span className="text-sm font-semibold">{item.label}</span>
+                  <span className="text-sm">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -716,8 +701,8 @@ const TramuzWebsite = () => {
           <div className="max-w-5xl">
             {/* Title */}
             <div className="mb-8">
-              <div className={`inline-block px-6 py-3 rounded-full bg-gradient-to-r ${heroSlides[currentSlide].accent} text-black font-bold text-sm mb-6`}>
-                ✨ شركة ترمُز للتصميم والاستشارات
+              <div className={`inline-block px-6 py-3 rounded-full bg-gradient-to-r ${heroSlides[currentSlide].accent} text-slate-800 font-bold text-sm mb-6`}>
+                ✨ {t('hero.badge')}
               </div>
               <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
                 <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
@@ -726,11 +711,11 @@ const TramuzWebsite = () => {
               </h1>
             </div>
             
-            <h2 className="text-3xl md:text-5xl mb-8 text-gray-200 leading-relaxed font-bold">
+            <h2 className="text-3xl md:text-5xl mb-8 text-slate-200 leading-relaxed font-bold">
               {heroSlides[currentSlide].subtitle}
             </h2>
             
-            <p className="text-xl md:text-2xl mb-12 text-gray-300 leading-relaxed font-medium max-w-4xl">
+            <p className="text-xl md:text-2xl mb-12 text-slate-300 leading-relaxed font-medium max-w-4xl">
               {heroSlides[currentSlide].description}
             </p>
             
@@ -746,7 +731,7 @@ const TramuzWebsite = () => {
               </button>
               <button 
                 onClick={() => scrollToSection('works')}
-                className="px-10 py-5 bg-stone-200/20 backdrop-blur-sm text-white font-bold text-lg rounded-2xl border-2 border-stone-300/40 hover:bg-stone-200/30 hover:border-stone-300/60 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
+                className="px-10 py-5 bg-slate-200/20 backdrop-blur-sm text-white font-bold text-lg rounded-2xl border-2 border-slate-300/40 hover:bg-slate-200/30 hover:border-slate-300/60 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
               >
                 <Play size={20} />
                 <span>عرض الأعمال</span>
@@ -790,14 +775,14 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              🏢 تعرف علينا أكثر
+              🏢 {t('about.badge')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-                من نحن
+            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+                {t('about.title')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              شركة رائدة في قطاع التصميم والاستشارات، نبتكر حلولاً متميزة تلهم وتحول المجتمعات
+            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+              {t('about.description')}
                   </p>
                 </div>
                 
@@ -805,38 +790,38 @@ const TramuzWebsite = () => {
           <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
             {/* Company Story */}
             <div className="space-y-8">
-              <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-10 shadow-xl border border-emerald-100/50 relative overflow-hidden">
+              <div className="bg-slate-50/90 backdrop-blur-lg rounded-3xl p-10 shadow-xl border border-slate-200/50 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-teal-50/50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center mb-6">
                     <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-2xl ml-4">
                       🏢
                     </div>
-                    <h3 className="text-2xl font-black text-gray-800">قصتنا</h3>
+                    <h3 className="text-2xl font-black text-slate-800">{t('about.story.title')}</h3>
                   </div>
-                  <p className="text-lg text-gray-700 leading-relaxed">
-                    <strong className="text-emerald-600">شركة "ترمُز"</strong> هي شركة رائدة وطموحة في قطاع التصميم والاستشارات، متخصصة في التصميم الداخلي والخارجي، التخطيط الحضري، تصميم المناظر الطبيعية، وتطوير العلامات التجارية. انطلقت ترمُز من الرياض وذاع صيتها في مناطق المملكة حتى تمكنت من تحقيق نجاحات وبناء علاقات مميزة مع عملائها.
+                  <p className="text-lg text-slate-700 leading-relaxed">
+                    {t('about.story.description')}
                   </p>
                 </div>
                 </div>
 
-              <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-10 shadow-xl border border-emerald-100/50 relative overflow-hidden">
+              <div className="bg-slate-50/90 backdrop-blur-lg rounded-3xl p-10 shadow-xl border border-slate-200/50 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 to-cyan-50/50"></div>
                 <div className="relative z-10">
                   <div className="flex items-center mb-6">
                     <div className="w-16 h-16 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center text-2xl ml-4">
                       🎯
                 </div>
-                    <h3 className="text-2xl font-black text-gray-800">رؤيتنا ورسالتنا</h3>
+                    <h3 className="text-2xl font-black text-slate-800">{t('about.visionMission.title')}</h3>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-lg font-bold text-emerald-600 mb-2">الرؤية</h4>
-                      <p className="text-gray-700">إنشاء مساحات مبتكرة تُلهم وتحوّل المجتمعات</p>
+                      <h4 className="text-lg font-bold text-emerald-600 mb-2">{t('about.visionMission.vision.title')}</h4>
+                      <p className="text-slate-700">{t('about.visionMission.vision.description')}</p>
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-teal-600 mb-2">الرسالة</h4>
-                      <p className="text-gray-700">الاستفادة من العقول والأفكار والخطط الفريدة لتقديم حلول خلاقة تقودنا وعملائنا إلى النجاح</p>
+                      <h4 className="text-lg font-bold text-teal-600 mb-2">{t('about.visionMission.mission.title')}</h4>
+                      <p className="text-slate-700">{t('about.visionMission.mission.description')}</p>
                     </div>
                   </div>
                 </div>
@@ -845,28 +830,23 @@ const TramuzWebsite = () => {
 
             {/* Values & Stats */}
             <div className="space-y-8">
-              <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-10 shadow-xl border border-emerald-100/50 relative overflow-hidden">
+              <div className="bg-slate-50/90 backdrop-blur-lg rounded-3xl p-10 shadow-xl border border-slate-200/50 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-stone-50/50 to-emerald-50/50"></div>
                 <div className="relative z-10">
                   <div className="text-center mb-8">
                     <div className="w-20 h-20 bg-gradient-to-r from-stone-400 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                       <Heart className="text-white" size={32} />
                     </div>
-                    <h3 className="text-2xl font-black text-gray-800 mb-4">قيمنا الأساسية</h3>
+                    <h3 className="text-2xl font-black text-slate-800 mb-4">{t('about.values.title')}</h3>
                   </div>
                   
                   <div className="grid grid-cols-1 gap-6">
-                    {[
-                      { icon: "⏰", title: "الالتزام", desc: "بالوقت والوعود والأمانة" },
-                      { icon: "⭐", title: "الجودة", desc: "ثقافة عامة في أعلى مستوى" },
-                      { icon: "💡", title: "الإبداع", desc: "والابتكار لترك بصمة مميزة" },
-                      { icon: "🚀", title: "التميز", desc: "حلول مبتكرة وذكية" }
-                    ].map((value, index) => (
-                      <div key={index} className="flex items-center space-x-reverse space-x-4 p-4 bg-white/60 rounded-2xl hover:bg-white/80 transition-all duration-300">
+                    {t('about.values.items').map((value, index) => (
+                      <div key={index} className="flex items-center space-x-reverse space-x-4 p-4 bg-slate-100/60 rounded-2xl hover:bg-slate-100/80 transition-all duration-300">
                         <div className="text-2xl">{value.icon}</div>
                         <div className="flex-1">
-                          <h4 className="font-bold text-gray-800 text-sm">{value.title}</h4>
-                          <p className="text-gray-600 text-xs">{value.desc}</p>
+                          <h4 className="font-bold text-slate-800 text-sm">{value.title}</h4>
+                          <p className="text-slate-600 text-xs">{value.description}</p>
                         </div>
                       </div>
                     ))}
@@ -890,36 +870,36 @@ const TramuzWebsite = () => {
 
           {/* Why Choose Us */}
           <div className="text-center">
-            <h3 className="text-3xl font-black text-gray-800 mb-12">لماذا تختارنا؟</h3>
+            <h3 className="text-3xl font-black text-slate-800 mb-12">{t('about.whyChooseUs.title')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 {
                   icon: "🎨",
-                  title: "إبداع لا حدود له",
-                  description: "فريق مبدع يجمع بين الفن والوظيفة لإنشاء تصاميم استثنائية"
+                  title: t('about.whyChooseUs.features.0.title'),
+                  description: t('about.whyChooseUs.features.0.description')
                 },
                 {
                   icon: "⚡",
-                  title: "سرعة في التنفيذ",
-                  description: "نلتزم بالمواعيد المحددة ونقدم مشاريع عالية الجودة في الوقت المطلوب"
+                  title: t('about.whyChooseUs.features.1.title'),
+                  description: t('about.whyChooseUs.features.1.description')
                 },
                 {
                   icon: "🤝",
-                  title: "شراكة حقيقية",
-                  description: "نعمل كشريك حقيقي مع عملائنا لتحقيق أهدافهم ورؤيتهم"
+                  title: t('about.whyChooseUs.features.2.title'),
+                  description: t('about.whyChooseUs.features.2.description')
                 }
               ].map((feature, index) => (
                 <div
                   key={index}
-                  className="group bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-500 border border-emerald-100/50 hover:border-emerald-300/50 transform hover:-translate-y-2 hover:scale-105"
+                  className="group bg-slate-50/80 backdrop-blur-lg rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-500 border border-slate-200/50 hover:border-slate-300/50 transform hover:-translate-y-2 hover:scale-105"
                 >
                   <div className="text-4xl mb-6 group-hover:scale-110 transition-transform duration-300">
                     {feature.icon}
                   </div>
-                  <h4 className="text-xl font-black text-gray-800 mb-4 group-hover:text-emerald-700 transition-colors duration-300">
+                  <h4 className="text-xl font-black text-slate-800 mb-4 group-hover:text-emerald-700 transition-colors duration-300">
                     {feature.title}
                   </h4>
-                  <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
+                  <p className="text-slate-600 leading-relaxed group-hover:text-slate-700 transition-colors duration-300">
                     {feature.description}
                   </p>
                 </div>
@@ -934,14 +914,14 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-24">
             <div className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8">
-              ✨ خدماتنا المتميزة
+              ✨ {t('services.title')}
             </div>
             <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
-                خدماتنا المميزة
+                {t('services.title')}
             </h2>
             <div className="w-32 h-2 bg-emerald-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              نقدم مجموعة شاملة من الخدمات المتخصصة في التصميم الداخلي والخارجي، التخطيط الحضري، تصميم المناظر الطبيعية، تطوير العلامات التجارية، والاستشارات المتخصصة في مختلف المجالات بمعايير عالمية وجودة استثنائية
+            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+              {t('services.subtitle')}
             </p>
           </div>
 
@@ -949,7 +929,7 @@ const TramuzWebsite = () => {
             {services.map((service, index) => (
               <div
                 key={index}
-                className="group relative bg-white rounded-3xl p-10 shadow-xl hover:shadow-lg transition-all duration-200 border border-gray-100 transform hover:-translate-y-1 overflow-hidden"
+                className="group relative bg-slate-50 rounded-3xl p-10 shadow-xl hover:shadow-lg transition-all duration-200 border border-slate-200 transform hover:-translate-y-1 overflow-hidden"
               >
                 {/* Background Gradient */}
                 <div className="absolute inset-0 bg-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
@@ -961,10 +941,10 @@ const TramuzWebsite = () => {
                 
                 {/* Content */}
                 <div className="relative z-10">
-                  <h3 className="text-2xl font-black text-gray-900 mb-6 group-hover:text-slate-700 transition-colors duration-300">
+                  <h3 className="text-2xl font-black text-slate-900 mb-6 group-hover:text-slate-700 transition-colors duration-300">
                     {service.title}
                   </h3>
-                  <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
+                  <p className="text-slate-600 leading-relaxed mb-6 group-hover:text-slate-700 transition-colors duration-300">
                     {service.description}
                   </p>
                   
@@ -972,7 +952,7 @@ const TramuzWebsite = () => {
                   <div className="mb-6">
                     <ul className="space-y-2">
                       {service.details.map((detail, detailIndex) => (
-                        <li key={detailIndex} className="flex items-start text-sm text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
+                        <li key={detailIndex} className="flex items-start text-sm text-slate-600 group-hover:text-slate-700 transition-colors duration-300">
                           <div className="w-2 h-2 bg-slate-500 rounded-full mt-2 ml-3 flex-shrink-0"></div>
                           <span>{detail}</span>
                         </li>
@@ -980,17 +960,32 @@ const TramuzWebsite = () => {
                     </ul>
                   </div>
                   
-                  {/* CTA */}
+                  {/* Price */}
+                  <div className="mb-4">
+                    <span className="text-2xl font-black text-slate-700">{service.price} {t('services.sar')}</span>
+                  </div>
+
+                  {/* CTA Buttons */}
+                  <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => {
                       setSelectedService(service);
                       setIsModalOpen(true);
                     }}
-                    className="flex items-center text-slate-600 font-bold opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:text-slate-700"
+                      className="flex items-center justify-center text-slate-600 font-bold opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:text-slate-700"
                   >
-                    <span>اعرف المزيد</span>
+                      <span>اعرف المزيد</span>
                     <ArrowLeft className="mr-2 group-hover:-translate-x-1 transition-transform" size={18} />
                   </button>
+                    
+                    <button 
+                      onClick={() => addToCart(service)}
+                      className="flex items-center justify-center bg-gradient-to-r from-slate-600 to-slate-700 text-white font-bold py-3 px-6 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:from-slate-700 hover:to-slate-800 shadow-lg hover:shadow-xl"
+                    >
+                      <ShoppingCart size={18} className="ml-2 group-hover:scale-110 transition-transform duration-200" />
+                      <span>{t('services.addToCart')}</span>
+                  </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1031,14 +1026,14 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              🎨 معرض أعمالنا
+              🎨 {t('works.badge')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-              معرض أعمالنا
+            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+              {t('works.title')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              نعرض أفضل أعمالنا في مجال العمارة والتصميم والهوية التجارية
+            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+              {t('works.subtitle')}
             </p>
           </div>
 
@@ -1213,17 +1208,17 @@ const TramuzWebsite = () => {
                   
                   {/* Year Badge */}
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-white/90 text-gray-800 text-xs font-bold rounded-full">
+                    <span className="px-3 py-1 bg-slate-100/90 text-slate-800 text-xs font-bold rounded-full">
                       {project.year}
                       </span>
                     </div>
                   </div>
                   
                 <div className="p-6">
-                  <h3 className="text-xl font-black text-gray-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300">
+                  <h3 className="text-xl font-black text-slate-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300">
                     {project.title}
                   </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
+                  <p className="text-slate-600 text-sm leading-relaxed group-hover:text-slate-700 transition-colors duration-300">
                     {project.description}
                   </p>
                 </div>
@@ -1239,9 +1234,9 @@ const TramuzWebsite = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full flex items-center justify-center mx-auto mb-8">
                   <Play className="text-white" size={32} />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">ابدأ مشروعك معنا</h3>
-                <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-                  دعنا نساعدك في تحويل رؤيتك إلى واقع مذهل من خلال خدماتنا المميزة
+                <h3 className="text-3xl md:text-4xl font-black mb-6 text-slate-800">{t('works.cta.title')}</h3>
+                <p className="text-xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+                  {t('works.cta.description')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
                   <button 
@@ -1249,7 +1244,7 @@ const TramuzWebsite = () => {
                     className="px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xl rounded-2xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Play size={24} />
-                    <span>ابدأ مشروعك</span>
+                    <span>{t('works.cta.button')}</span>
                   </button>
                 </div>
               </div>
@@ -1268,14 +1263,14 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              🤝 شركاء النجاح
+              🤝 {t('clients.badge')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-              عملاؤنا
+            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+              {t('clients.title')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              نفتخر بخدمة عملائنا الكرام من مختلف القطاعات والصناعات
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+              {t('clients.subtitle')}
             </p>
                 </div>
                 
@@ -1360,7 +1355,7 @@ const TramuzWebsite = () => {
                     <div className={`w-16 h-16 bg-gradient-to-r ${category.gradient} rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                       {category.icon}
                     </div>
-                    <h3 className="text-2xl font-black text-gray-800 group-hover:text-emerald-700 transition-colors duration-300">
+                    <h3 className="text-2xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors duration-300">
                       {category.category}
                     </h3>
                   </div>
@@ -1441,14 +1436,14 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              👥 فريقنا المتميز
+              👥 {t('about.team.title')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-              الفريق
+            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+              {t('about.team.title')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              فريق من الخبراء والمختصين في مختلف مجالات التصميم والاستشارات
+            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+              {t('about.team.description')}
             </p>
           </div>
 
@@ -1597,11 +1592,11 @@ const TramuzWebsite = () => {
               🏆 إنجازاتنا المميزة
             </div>
             <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-                إنجازاتنا بالأرقام
+                {t('stats.badge')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              أرقام تتحدث عن جودتنا وتميزنا في التصميم والاستشارات
+              {t('stats.description')}
             </p>
           </div>
 
@@ -1680,14 +1675,14 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              💬 آراء عملائنا
+              💬 {t('success.badge')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-              آراء العملاء
+            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+              {t('success.badge')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              ما يقوله عملاؤنا عن خدماتنا المميزة في التصميم والاستشارات
+            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+              {t('success.subtitle')}
             </p>
           </div>
 
@@ -1814,9 +1809,9 @@ const TramuzWebsite = () => {
                 <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full flex items-center justify-center mx-auto mb-8">
                   <Heart className="text-white" size={32} />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">شاركنا رأيك</h3>
+                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">{t('success.shareOpinion.title')}</h3>
                 <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-                  نحن نقدر آراء عملائنا ونعمل باستمرار على تحسين خدماتنا
+                  {t('success.shareOpinion.description')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
                   <button 
@@ -1844,13 +1839,13 @@ const TramuzWebsite = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              📞 نحن هنا لمساعدتك
+              📞 {t('contact.badge')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
-                تواصل معنا
+            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+                {t('contact.title')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
               استعد لتجربة استثنائية مع فريق ترمُز المحترف - نحن هنا لتحويل أحلامك إلى واقع مذهل
             </p>
           </div>
@@ -1865,7 +1860,7 @@ const TramuzWebsite = () => {
                     <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center ml-4">
                       <Phone className="text-white" size={24} />
                     </div>
-                    معلومات التواصل
+                    {t('contact.info.title')}
                   </h3>
                   
                   <div className="space-y-8">
@@ -1915,8 +1910,8 @@ const TramuzWebsite = () => {
                   <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <Mail className="text-white" size={32} />
                   </div>
-                  <h3 className="text-3xl font-black text-gray-800 mb-2">أرسل لنا رسالة</h3>
-                  <p className="text-gray-600 text-lg">سنتواصل معك خلال 24 ساعة</p>
+                  <h3 className="text-3xl font-black text-gray-800 mb-2">{t('contact.form.title')}</h3>
+                  <p className="text-gray-600 text-lg">{t('contact.form.subtitle')}</p>
                 </div>
 
                 <form className="space-y-8">
@@ -1996,7 +1991,7 @@ const TramuzWebsite = () => {
               <span className="text-emerald-700 font-medium text-sm">قصص نجاح عملائنا</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                حالات النجاح
+                {t('success.stories.title')}
             </h2>
             <div className="w-16 h-1 bg-gradient-to-r from-emerald-600 to-teal-600 mx-auto rounded-full mb-4"></div>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -2098,8 +2093,8 @@ const TramuzWebsite = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-br from-gray-900 via-emerald-900/20 to-teal-900/20 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-gray-900/95"></div>
+      <footer className="bg-gradient-to-br from-slate-900 via-emerald-900/20 to-teal-900/20 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-slate-900/95"></div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Main Footer Content */}
@@ -2187,8 +2182,8 @@ const TramuzWebsite = () => {
                     <Phone size={18} className="text-emerald-400 mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-gray-300 text-sm font-medium">الهاتف</p>
-                      <a href="tel:+966501234567" className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
-                        +966 50 123 4567
+                      <a href="tel:+966550500410" className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
+                        +966 55 050 0410
                       </a>
             </div>
           </div>
@@ -2200,7 +2195,7 @@ const TramuzWebsite = () => {
                       <a href="mailto:info@tramuz-design.com" className="text-white hover:text-emerald-400 transition-colors duration-300 text-sm" dir="ltr">
                         info@tramuz-design.com
                       </a>
-                    </div>
+                </div>
                   </div>
                   
                   <div className="flex items-start space-x-reverse space-x-3">
@@ -2361,6 +2356,123 @@ const TramuzWebsite = () => {
           </div>
         </div>
       )}
+
+      {/* Cart Sidebar */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsCartOpen(false)}
+          ></div>
+          
+          {/* Cart Content */}
+          <div className="relative bg-slate-50 w-full max-w-md h-full shadow-2xl overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-reverse space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-slate-600 to-slate-700 rounded-xl flex items-center justify-center">
+                    <ShoppingCart size={20} className="text-white" />
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-900">سلة التسوق</h2>
+                </div>
+                <button
+                  onClick={() => setIsCartOpen(false)}
+                  className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-200 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Cart Items */}
+            <div className="p-6">
+              {cart.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">{t('cart.empty')}</p>
+                  <p className="text-gray-400 text-sm mt-2">{t('cart.addServices')}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map((item) => (
+                    <div key={item.id} className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl p-4 border border-slate-100 shadow-sm">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-black text-gray-900 mb-1">{item.title}</h3>
+                          <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                          <p className="text-lg font-black text-slate-700">{item.price} ريال</p>
+                        </div>
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                      
+                      {/* Quantity Controls */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-reverse space-x-3">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-full flex items-center justify-center hover:from-slate-700 hover:to-slate-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="font-black text-gray-900 w-8 text-center bg-slate-100 rounded-lg py-1">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-full flex items-center justify-center hover:from-slate-700 hover:to-slate-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">{t('cart.total')}</p>
+                          <p className="font-black text-slate-700">{item.price * item.quantity} ريال</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {cart.length > 0 && (
+              <div className="sticky bottom-0 bg-gradient-to-r from-slate-50 to-gray-50 border-t border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-lg font-black text-gray-900">{t('cart.total')}:</span>
+                  <span className="text-2xl font-black text-slate-700">{getCartTotal()} ريال</span>
+                </div>
+                
+                <button
+                  onClick={sendToWhatsApp}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black py-4 px-6 rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <span>{t('cart.completeOrder')}</span>
+                  <span className="text-xl">📱</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href={`https://wa.me/966550500410`}
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-24 right-8 z-50 bg-[#25D366] hover:bg-[#1ebe5a] text-white rounded-full shadow-xl w-16 h-16 flex items-center justify-center transition-transform duration-200 hover:scale-110"
+        aria-label="WhatsApp"
+      >
+        <svg viewBox="0 0 32 32" width="34" height="34" fill="currentColor" aria-hidden="true">
+          <path d="M19.11 17.27c-.26-.13-1.53-.76-1.77-.85-.24-.09-.42-.13-.6.13s-.69.85-.85 1.02c-.16.17-.31.19-.57.06-.26-.13-1.1-.41-2.1-1.31-.78-.69-1.31-1.54-1.47-1.8-.16-.26-.02-.4.12-.52.12-.12.26-.31.39-.46.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.46-.06-.13-.6-1.45-.82-1.99-.22-.53-.44-.46-.6-.47-.15-.01-.32-.01-.49-.01-.17 0-.46.06-.7.32-.24.26-.92.9-.92 2.2s.94 2.55 1.07 2.73c.13.17 1.85 2.82 4.48 3.95.63.27 1.11.43 1.49.55.63.2 1.2.17 1.65.1.5-.07 1.53-.63 1.75-1.24.22-.61.22-1.13.15-1.24-.07-.11-.24-.17-.5-.3zM16 3c7.18 0 13 5.82 13 13 0 7.18-5.82 13-13 13-2.28 0-4.41-.6-6.26-1.67L3 29l1.73-6.57C3.6 20.6 3 18.47 3 16 3 8.82 8.82 3 16 3zm0 2.34c-5.88 0-10.66 4.78-10.66 10.66 0 2.09.62 4.03 1.68 5.66l-1.1 4.16 4.27-1.12c1.6 1.04 3.5 1.64 5.54 1.64 5.88 0 10.66-4.78 10.66-10.66S21.88 5.34 16 5.34z"></path>
+        </svg>
+      </a>
 
       {/* Scroll to Top Button */}
       <div className="fixed bottom-8 right-8 z-50">
