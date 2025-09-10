@@ -5,8 +5,6 @@ import enTranslations from '../locales/en.json';
 import heroImg1 from '../images/hero/hero-1.jpg';
 import heroImg2 from '../images/hero/hero-2.jpg';
 import heroImg3 from '../images/hero/hero-3.jpg';
-import { firestore } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
 const TramuzWebsite = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -62,26 +60,7 @@ const TramuzWebsite = () => {
     };
   }, [isModalOpen]);
 
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const ref = doc(firestore, 'websiteContent', 'hero');
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setRemoteContent(snap.data());
-        }
-        const sectionsRef = doc(firestore, 'websiteContent', 'sections');
-        const sectionsSnap = await getDoc(sectionsRef);
-        if (sectionsSnap.exists()) {
-          setRemoteSections(sectionsSnap.data());
-        }
-      } catch (err) {
-        console.warn('Failed to fetch remote content', err);
-      }
-    };
-    fetchContent();
-  }, []);
-
+ 
   const heroSlides = [
     {
       title: remoteContent?.[language]?.title || t('hero.title'),
