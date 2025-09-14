@@ -5,21 +5,41 @@ import enTranslations from '../locales/en.json';
 import heroImg1 from '../images/hero/hero-1.jpg';
 import heroImg2 from '../images/hero/hero-2.jpg';
 import heroImg3 from '../images/hero/hero-3.jpg';
+import { db } from '../firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 const TramuzWebsite = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const [selectedService, setSelectedService] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [selectedService, setSelectedService] = useState(null);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [language, setLanguage] = useState('ar');
   const [isRTL, setIsRTL] = useState(true);
-  const [remoteContent, setRemoteContent] = useState(null);
-  const [remoteSections, setRemoteSections] = useState(null);
+  // const [remoteContent, setRemoteContent] = useState(null);
+  // const [remoteSections, setRemoteSections] = useState(null);
+  const [firebaseProjects, setFirebaseProjects] = useState([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [firebaseServices, setFirebaseServices] = useState([]);
+  // const [isLoadingServices, setIsLoadingServices] = useState(false);
+  const [firebaseTeam, setFirebaseTeam] = useState([]);
+  const [isLoadingTeam, setIsLoadingTeam] = useState(false);
+  const [firebaseContactInfo, setFirebaseContactInfo] = useState({
+    phone: "",
+    email: "",
+    address: "",
+    whatsapp: "",
+    instagram: "",
+    twitter: "",
+    linkedin: "",
+    facebook: "",
+    youtube: ""
+  });
+  const [isLoadingContact, setIsLoadingContact] = useState(false);
 
   // Translation function
   const t = (key) => {
@@ -34,6 +54,143 @@ const TramuzWebsite = () => {
     return value || key;
   };
 
+  // تحميل المشاريع من Firebase
+  const fetchProjectsFromFirebase = async () => {
+    try {
+      setIsLoadingProjects(true);
+      const querySnapshot = await getDocs(collection(db, "projects"));
+      const projectsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFirebaseProjects(projectsList);
+    } catch (error) {
+      console.error("خطأ في تحميل المشاريع من Firebase: ", error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  // تحميل الخدمات من Firebase
+  const fetchServicesFromFirebase = async () => {
+    try {
+      // setIsLoadingServices(true);
+      const querySnapshot = await getDocs(collection(db, "services"));
+      const servicesList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFirebaseServices(servicesList);
+    } catch (error) {
+      console.error("خطأ في تحميل الخدمات من Firebase: ", error);
+    } finally {
+      // setIsLoadingServices(false);
+    }
+  };
+
+  // تحميل الفريق من Firebase
+  const fetchTeamFromFirebase = async () => {
+    try {
+      setIsLoadingTeam(true);
+      const querySnapshot = await getDocs(collection(db, "team"));
+      const teamList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFirebaseTeam(teamList);
+    } catch (error) {
+      console.error("خطأ في تحميل الفريق من Firebase: ", error);
+    } finally {
+      setIsLoadingTeam(false);
+    }
+  };
+
+  // تحميل معلومات التواصل من Firebase
+  const fetchContactInfoFromFirebase = async () => {
+    try {
+      setIsLoadingContact(true);
+      const querySnapshot = await getDocs(collection(db, "contactInfo"));
+      if (!querySnapshot.empty) {
+        const contactData = querySnapshot.docs[0].data();
+        setFirebaseContactInfo(contactData);
+      }
+    } catch (error) {
+      console.error("خطأ في تحميل معلومات التواصل من Firebase: ", error);
+    } finally {
+      setIsLoadingContact(false);
+    }
+  };
+
+  // دالة لتحويل بيانات Firebase إلى تنسيق مناسب للعرض
+  const getDisplayProjects = () => {
+    // تحويل بيانات Firebase إلى التنسيق المطلوب
+    const convertedProjects = firebaseProjects.map(project => {
+      let categoryDisplay = "";
+      let tabId = "";
+      
+      // تحويل category من Firebase إلى التنسيق المحلي
+      switch(project.category) {
+        case "exterior-design":
+          categoryDisplay = "تصميم خارجي";
+          tabId = "exterior";
+          break;
+        case "interior-design":
+          categoryDisplay = "تصميم داخلي";
+          tabId = "interior";
+          break;
+        case "execution-plans":
+          categoryDisplay = "مخططات تنفيذية";
+          tabId = "plans";
+          break;
+        case "branding":
+          categoryDisplay = "هوية بصرية";
+          tabId = "branding";
+          break;
+        default:
+          categoryDisplay = project.category;
+          tabId = "all";
+      }
+
+      return {
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        image: project.thumbnail.startsWith('http') ? project.thumbnail : null, // إذا كان رابط صورة
+        emoji: project.thumbnail.startsWith('http') ? null : project.thumbnail, // إذا كان emoji
+        category: categoryDisplay,
+        categoryId: tabId,
+        year: project.year
+      };
+    });
+
+    // تصفية المشاريع حسب التبويب النشط
+    return convertedProjects.filter(project => {
+      if (activeTab === 'all') return true;
+      return project.categoryId === activeTab;
+    });
+  };
+
+  // دالة لتحويل خدمات Firebase إلى تنسيق مناسب للعرض
+  const getDisplayServices = () => {
+    // استخدام الخدمات من Firebase فقط (إلغاء الخدمات الثابتة)
+    return firebaseServices.map(service => ({
+      id: `firebase-${service.id}`,
+      title: service.title,
+      description: service.description,
+      price: service.price || 0,
+      icon: <span style={{fontSize: '28px'}}>{service.icon}</span>,
+      gradient: "from-emerald-600 via-emerald-700 to-emerald-800",
+      bgGradient: "from-emerald-50 to-emerald-100",
+      hoverGradient: "from-emerald-700 via-emerald-800 to-emerald-900",
+      details: [service.description], // تحويل إلى مصفوفة
+      fullDescription: service.description,
+      features: [service.description], // تحويل إلى مصفوفة
+      process: [service.description], // تحويل إلى مصفوفة
+      examples: [service.description], // تحويل إلى مصفوفة
+      isFirebase: true
+    }));
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -42,30 +199,22 @@ const TramuzWebsite = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // تحميل البيانات من Firebase عند تحميل الصفحة
   useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        setIsModalOpen(false);
-      }
-    };
-    
-    if (isModalOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
-    
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isModalOpen]);
+    fetchProjectsFromFirebase();
+    fetchServicesFromFirebase();
+    fetchTeamFromFirebase();
+    fetchContactInfoFromFirebase();
+  }, []);
+
+  // تم حذف useEffect للمودال
 
  
   const heroSlides = [
     {
-      title: remoteContent?.[language]?.title || t('hero.title'),
-      subtitle: remoteContent?.[language]?.subtitle || t('hero.subtitle'),
-      description: remoteContent?.[language]?.description || t('hero.description'),
+      title: t('hero.title'),
+      subtitle: t('hero.subtitle'),
+      description: t('hero.description'),
       image: heroImg1,
       accent: 'from-emerald-100 to-teal-100',
     },
@@ -85,340 +234,9 @@ const TramuzWebsite = () => {
     },
   ];
 
-  const sectionTitle = (key, fallbackKey) => remoteSections?.[key]?.[language]?.title || t(fallbackKey);
+  // const sectionTitle = (key, fallbackKey) => remoteSections?.[key]?.[language]?.title || t(fallbackKey);
 
-  const services = [
-    { 
-      id: 1,
-      title: t('services.interiorDesign.title'), 
-      description: t('services.interiorDesign.description'), 
-      price: 5000,
-      icon: <Sparkles size={28} />, 
-      gradient: "from-slate-600 via-slate-700 to-slate-800", 
-      bgGradient: "from-slate-50 to-slate-100", 
-      hoverGradient: "from-slate-700 via-slate-800 to-slate-900",
-      details: t('services.interiorDesign.details'),
-      fullDescription: t('services.interiorDesign.fullDescription'),
-      features: t('services.interiorDesign.features'),
-      process: t('services.interiorDesign.process'),
-      examples: t('services.interiorDesign.examples')
-    },
-    { 
-      id: 2,
-      title: t('services.exteriorDesign.title'), 
-      description: t('services.exteriorDesign.description'), 
-      price: 8000,
-      icon: <Target size={28} />, 
-      gradient: "from-emerald-600 via-emerald-700 to-emerald-800", 
-      bgGradient: "from-emerald-50 to-emerald-100", 
-      hoverGradient: "from-emerald-700 via-emerald-800 to-emerald-900",
-      details: t('services.exteriorDesign.details'),
-      fullDescription: t('services.exteriorDesign.fullDescription'),
-      features: t('services.exteriorDesign.features'),
-      process: t('services.exteriorDesign.process'),
-      examples: t('services.exteriorDesign.examples')
-    },
-    { 
-      id: 3,
-      title: t('services.urbanPlanning.title'), 
-      description: t('services.urbanPlanning.description'), 
-      price: 12000,
-      icon: <Zap size={28} />, 
-      gradient: "from-amber-600 via-amber-700 to-amber-800", 
-      bgGradient: "from-amber-50 to-amber-100", 
-      hoverGradient: "from-amber-700 via-amber-800 to-amber-900",
-      details: t('services.urbanPlanning.details'),
-      fullDescription: t('services.urbanPlanning.fullDescription'),
-      features: t('services.urbanPlanning.features'),
-      process: t('services.urbanPlanning.process'),
-      examples: t('services.urbanPlanning.examples')
-    },
-    { 
-      id: 4,
-      title: t('services.landscapeDesign.title'), 
-      description: t('services.landscapeDesign.description'), 
-      price: 6000,
-      icon: <Globe size={28} />, 
-      gradient: "from-teal-600 via-teal-700 to-teal-800", 
-      bgGradient: "from-teal-50 to-teal-100", 
-      hoverGradient: "from-teal-700 via-teal-800 to-teal-900",
-      details: t('services.landscapeDesign.details'),
-      fullDescription: t('services.landscapeDesign.fullDescription'),
-      features: t('services.landscapeDesign.features'),
-      process: t('services.landscapeDesign.process'),
-      examples: t('services.landscapeDesign.examples')
-    },
-    { 
-      id: 5,
-      title: t('services.brandDevelopment.title'), 
-      description: t('services.brandDevelopment.description'), 
-      price: 3000,
-      icon: <Heart size={28} />, 
-      gradient: "from-rose-600 via-rose-700 to-rose-800", 
-      bgGradient: "from-rose-50 to-rose-100", 
-      hoverGradient: "from-rose-700 via-rose-800 to-rose-900",
-      details: t('services.brandDevelopment.details'),
-      fullDescription: t('services.brandDevelopment.fullDescription'),
-      features: t('services.brandDevelopment.features'),
-      process: t('services.brandDevelopment.process'),
-      examples: t('services.brandDevelopment.examples')
-    },
-    { 
-      id: 6,
-      title: t('services.marketingConsulting.title'), 
-      description: t('services.marketingConsulting.description'), 
-      price: 4000,
-      icon: <Users size={28} />, 
-      gradient: "from-indigo-600 via-indigo-700 to-indigo-800", 
-      bgGradient: "from-indigo-50 to-indigo-100", 
-      hoverGradient: "from-indigo-700 via-indigo-800 to-indigo-900",
-      details: t('services.marketingConsulting.details'),
-      fullDescription: t('services.marketingConsulting.fullDescription'),
-      features: t('services.marketingConsulting.features'),
-      process: t('services.marketingConsulting.process'),
-      examples: t('services.marketingConsulting.examples')
-    },
-    { 
-      title: "استشارات تشغيلية", 
-      description: "تقديم توصيات عملية لتحسين الإدارة التشغيلية وجودة المنتجات ورضا العملاء", 
-      icon: <Award size={28} />, 
-      gradient: "from-indigo-500 via-purple-500 to-pink-500", 
-      bgGradient: "from-indigo-50 to-purple-50", 
-      hoverGradient: "from-indigo-600 to-purple-600",
-      details: [
-        "تحسين الإدارة التشغيلية",
-        "رفع جودة المنتجات والخدمات",
-        "زيادة رضا العملاء",
-        "تحسين الكفاءة التشغيلية",
-        "زيادة المبيعات والأرباح"
-      ],
-      fullDescription: "نقدم استشارات تشغيلية متخصصة تساعد الشركات على تحسين أدائها التشغيلي وزيادة الكفاءة. نعمل على تطوير حلول عملية لتحسين الإدارة التشغيلية وجودة المنتجات ورضا العملاء مما يزيد من المبيعات والأرباح.",
-      features: [
-        "تحليل العمليات التشغيلية",
-        "تطوير استراتيجيات تحسين الجودة",
-        "تحسين تجربة العملاء",
-        "تطوير أنظمة إدارة متقدمة",
-        "تحليل الأداء والمؤشرات",
-        "تطوير برامج تدريب الموظفين",
-        "تحسين سلاسل التوريد",
-        "تطوير معايير الجودة"
-      ],
-      process: [
-        "تحليل الوضع التشغيلي الحالي",
-        "تحديد نقاط التحسين",
-        "تطوير خطة التحسين",
-        "تنفيذ الحلول المقترحة",
-        "متابعة النتائج والتطوير"
-      ],
-      examples: [
-        "تحسين عمليات المطاعم",
-        "تطوير أنظمة الجودة",
-        "تحسين تجربة العملاء",
-        "تطوير برامج التدريب",
-        "تحسين الكفاءة التشغيلية"
-      ]
-    },
-    { 
-      title: "استشارات تقنية", 
-      description: "تصميم وتنفيذ حلول تقنية متكاملة وفعالة من حيث التكلفة لتبسيط العمليات", 
-      icon: <Zap size={28} />, 
-      gradient: "from-cyan-500 via-blue-500 to-indigo-500", 
-      bgGradient: "from-cyan-50 to-blue-50", 
-      hoverGradient: "from-cyan-600 to-blue-600",
-      details: [
-        "تصميم حلول تقنية متكاملة",
-        "تحسين العمليات التقنية",
-        "تطوير أنظمة ذكية",
-        "تحسين تجربة العملاء",
-        "تقليل التكاليف التشغيلية"
-      ],
-      fullDescription: "نقدم استشارات تقنية متخصصة تساعد الشركات على تطوير وتنفيذ حلول تقنية متكاملة وفعالة من حيث التكلفة. نعمل على تبسيط العمليات وتحسين تجربة العملاء من خلال التكنولوجيا الحديثة.",
-      features: [
-        "تطوير أنظمة إدارة متقدمة",
-        "تصميم تطبيقات مخصصة",
-        "تحسين البنية التحتية التقنية",
-        "تطوير حلول الذكاء الاصطناعي",
-        "تحسين الأمان السيبراني",
-        "تطوير أنظمة الدفع الإلكتروني",
-        "تحسين تجربة المستخدم",
-        "تطوير حلول إدارة البيانات"
-      ],
-      process: [
-        "تحليل الاحتياجات التقنية",
-        "تطوير الحلول المقترحة",
-        "تصميم النظام التقني",
-        "تنفيذ الحلول",
-        "اختبار وتطوير النظام"
-      ],
-      examples: [
-        "تطوير أنظمة إدارة المطاعم",
-        "تصميم تطبيقات الهاتف المحمول",
-        "تحسين الأنظمة التقنية",
-        "تطوير حلول الدفع الإلكتروني",
-        "تحسين تجربة العملاء التقنية"
-      ]
-    },
-    { 
-      title: "توظيف وتدريب", 
-      description: "تطوير وإدارة برامج تدريب حديثة ترفع من كفاءة الموظفين وتزيد من رضا العملاء", 
-      icon: <Users size={28} />, 
-      gradient: "from-teal-500 via-green-500 to-emerald-500", 
-      bgGradient: "from-teal-50 to-green-50", 
-      hoverGradient: "from-teal-600 to-green-600",
-      details: [
-        "تطوير برامج تدريب متخصصة",
-        "رفع كفاءة الموظفين",
-        "زيادة رضا العملاء",
-        "تطوير المهارات المهنية",
-        "تحسين الأداء المؤسسي"
-      ],
-      fullDescription: "نقدم خدمات توظيف وتدريب متخصصة تساعد الشركات على تطوير كوادرها البشرية ورفع كفاءتها. نعمل على تطوير وإدارة برامج تدريب حديثة ترفع من كفاءة الموظفين وتزيد من رضا العملاء.",
-      features: [
-        "تطوير برامج تدريب متخصصة",
-        "تدريب الموظفين على المهارات الجديدة",
-        "تطوير برامج التطوير المهني",
-        "تدريب فرق العمل على أفضل الممارسات",
-        "تطوير برامج القيادة والإدارة",
-        "تدريب الموظفين على خدمة العملاء",
-        "تطوير برامج التطوير المستمر",
-        "تقييم وتطوير الأداء"
-      ],
-      process: [
-        "تحليل احتياجات التدريب",
-        "تطوير برامج التدريب",
-        "تنفيذ برامج التدريب",
-        "تقييم نتائج التدريب",
-        "تطوير وتحسين البرامج"
-      ],
-      examples: [
-        "تدريب موظفي المطاعم",
-        "تطوير برامج خدمة العملاء",
-        "تدريب فرق الإدارة",
-        "تطوير برامج المبيعات",
-        "تدريب فرق التطوير"
-      ]
-    },
-    { 
-      title: "إدارة العقود", 
-      description: "إدارة العقود من صياغتها حتى تدقيقها بما يضمن الأمان القانوني والمالي للمشاريع", 
-      icon: <Award size={28} />, 
-      gradient: "from-amber-500 via-orange-500 to-red-500", 
-      bgGradient: "from-amber-50 to-orange-50", 
-      hoverGradient: "from-amber-600 to-orange-600",
-      details: [
-        "صياغة العقود القانونية",
-        "مراجعة وتدقيق العقود",
-        "ضمان الأمان القانوني",
-        "حماية المصالح المالية",
-        "إدارة العلاقات التعاقدية"
-      ],
-      fullDescription: "نقدم خدمات إدارة العقود المتخصصة التي تشمل صياغة العقود القانونية ومراجعتها وتدقيقها. نعمل على ضمان الأمان القانوني والمالي للمشاريع من خلال إدارة شاملة للعقود.",
-      features: [
-        "صياغة العقود القانونية",
-        "مراجعة العقود الموجودة",
-        "تدقيق العقود المالية",
-        "تطوير نماذج العقود",
-        "إدارة تنفيذ العقود",
-        "حل النزاعات التعاقدية",
-        "تطوير سياسات العقود",
-        "تدريب فرق العمل على العقود"
-      ],
-      process: [
-        "تحليل متطلبات العقد",
-        "صياغة مسودة العقد",
-        "مراجعة العقد قانونياً",
-        "التفاوض على شروط العقد",
-        "التوقيع ومتابعة التنفيذ"
-      ],
-      examples: [
-        "عقود المطاعم والمقاهي",
-        "عقود التصميم والاستشارات",
-        "عقود التوريد والخدمات",
-        "عقود الإدارة والتشغيل",
-        "عقود التطوير والاستثمار"
-      ]
-    },
-    { 
-      title: "دراسة الجدوى والتخطيط الاستراتيجي", 
-      description: "إعداد دراسات جدوى اقتصادية متكاملة تشمل السوق والمنافسين والعوائد المتوقعة", 
-      icon: <Target size={28} />, 
-      gradient: "from-violet-500 via-purple-500 to-fuchsia-500", 
-      bgGradient: "from-violet-50 to-purple-50", 
-      hoverGradient: "from-violet-600 to-purple-600",
-      details: [
-        "دراسات جدوى اقتصادية شاملة",
-        "تحليل السوق والمنافسين",
-        "تقييم العوائد المتوقعة",
-        "تطوير الخطط الاستراتيجية",
-        "تحديد الفرص الاستثمارية"
-      ],
-      fullDescription: "نقدم خدمات دراسة الجدوى والتخطيط الاستراتيجي المتخصصة التي تساعد الشركات على اتخاذ قرارات استثمارية مدروسة. نعمل على إعداد دراسات جدوى اقتصادية متكاملة تشمل السوق والمنافسين والعوائد المتوقعة.",
-      features: [
-        "دراسات جدوى اقتصادية",
-        "تحليل السوق والمنافسين",
-        "تقييم الجدوى المالية",
-        "تطوير الخطط الاستراتيجية",
-        "تحليل المخاطر والفرص",
-        "تطوير نماذج الأعمال",
-        "تقييم العوائد الاستثمارية",
-        "تطوير استراتيجيات النمو"
-      ],
-      process: [
-        "تحليل السوق والبيئة",
-        "تطوير نموذج الأعمال",
-        "تقييم الجدوى المالية",
-        "تحليل المخاطر",
-        "تطوير التوصيات الاستراتيجية"
-      ],
-      examples: [
-        "دراسات جدوى المطاعم",
-        "تخطيط استراتيجي للشركات",
-        "تقييم المشاريع الاستثمارية",
-        "تطوير استراتيجيات النمو",
-        "تحليل الفرص السوقية"
-      ]
-    },
-    { 
-      title: "إدارة علاقات الشركات", 
-      description: "تطوير استراتيجيات لبناء روابط قوية مع العملاء والشركاء والمستثمرين", 
-      icon: <Heart size={28} />, 
-      gradient: "from-rose-500 via-pink-500 to-red-500", 
-      bgGradient: "from-rose-50 to-pink-50", 
-      hoverGradient: "from-rose-600 to-pink-600",
-      details: [
-        "بناء علاقات قوية مع العملاء",
-        "تطوير شراكات استراتيجية",
-        "إدارة علاقات المستثمرين",
-        "تطوير شبكات الأعمال",
-        "تحسين سمعة الشركة"
-      ],
-      fullDescription: "نقدم خدمات إدارة علاقات الشركات المتخصصة التي تساعد الشركات على بناء وتطوير علاقات قوية مع العملاء والشركاء والمستثمرين. نعمل على تطوير استراتيجيات شاملة لتحسين سمعة الشركة وزيادة فرص النمو.",
-      features: [
-        "تطوير استراتيجيات العلاقات العامة",
-        "بناء شراكات استراتيجية",
-        "إدارة علاقات العملاء",
-        "تطوير برامج الولاء",
-        "إدارة الأحداث والفعاليات",
-        "تطوير المحتوى التسويقي",
-        "إدارة الأزمات والسمعة",
-        "تطوير شبكات الأعمال"
-      ],
-      process: [
-        "تحليل العلاقات الحالية",
-        "تطوير استراتيجية العلاقات",
-        "تنفيذ برامج العلاقات",
-        "متابعة وتقييم النتائج",
-        "تطوير وتحسين الاستراتيجيات"
-      ],
-      examples: [
-        "إدارة علاقات عملاء المطاعم",
-        "تطوير شراكات تجارية",
-        "إدارة علاقات المستثمرين",
-        "تطوير برامج الولاء",
-        "إدارة الأحداث والفعاليات"
-      ]
-    }
-  ];
+  // تم حذف الخدمات الثابتة - الآن الخدمات تُعرض من Firebase فقط
 
   const stats = [
     { 
@@ -905,7 +723,7 @@ Thank you`;
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {services.map((service, index) => (
+            {getDisplayServices().map((service, index) => (
               <div
                 key={index}
                 className="group relative bg-slate-50 rounded-3xl p-10 shadow-xl hover:shadow-lg transition-all duration-200 border border-slate-200 transform hover:-translate-y-1 overflow-hidden"
@@ -940,30 +758,21 @@ Thank you`;
                   </div>
                   
                   {/* Price */}
+                  {service.price > 0 && (
                   <div className="mb-4">
                     <span className="text-2xl font-black text-slate-700">{service.price} {t('services.sar')}</span>
                   </div>
+                  )}
 
                   {/* CTA Buttons */}
                   <div className="flex flex-col gap-3">
-                  <button 
-                    onClick={() => {
-                      setSelectedService(service);
-                      setIsModalOpen(true);
-                    }}
-                      className="flex items-center justify-center text-slate-600 font-bold opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:text-slate-700"
-                  >
-                      <span>اعرف المزيد</span>
-                    <ArrowLeft className="mr-2 group-hover:-translate-x-1 transition-transform" size={18} />
-                  </button>
-                    
                     <button 
                       onClick={() => addToCart(service)}
                       className="flex items-center justify-center bg-gradient-to-r from-slate-600 to-slate-700 text-white font-bold py-3 px-6 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:from-slate-700 hover:to-slate-800 shadow-lg hover:shadow-xl"
                     >
                       <ShoppingCart size={18} className="ml-2 group-hover:scale-110 transition-transform duration-200" />
                       <span>{t('services.addToCart')}</span>
-                  </button>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1042,124 +851,25 @@ Thank you`;
 
           {/* Gallery Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {[
-              // جميع المشاريع
-              ...(activeTab === 'all' || activeTab === 'exterior' ? [
-                {
-                  id: 1,
-                  title: "مبنى تجاري راقي",
-                  description: "تصميم خارجي لمبنى تجاري في الرياض",
-                  image: require('../images/gallery/exterior-1.jpg'),
-                  category: "تصميم خارجي",
-                  year: "2024"
-                },
-                {
-                  id: 2,
-                  title: "مجمع سكني فاخر",
-                  description: "تصميم خارجي لمجمع سكني متكامل",
-                  image: require('../images/gallery/exterior-2.jpg'),
-                  category: "تصميم خارجي",
-                  year: "2024"
-                },
-                {
-                  id: 3,
-                  title: "مبنى إداري عصري",
-                  description: "تصميم خارجي لمبنى إداري حديث",
-                  image: require('../images/gallery/exterior-3.jpg'),
-                  category: "تصميم خارجي",
-                  year: "2023"
-                }
-              ] : []),
-              
-              // التصميم الداخلي
-              ...(activeTab === 'all' || activeTab === 'interior' ? [
-                {
-                  id: 4,
-                  title: "مطعم راقي",
-                  description: "تصميم داخلي لمطعم راقي في الرياض",
-                  image: require('../images/gallery/interior-1.jpg'),
-                  category: "تصميم داخلي",
-                  year: "2024"
-                },
-                {
-                  id: 5,
-                  title: "مقهى عصري",
-                  description: "تصميم داخلي لمقهى عصري في جدة",
-                  image: require('../images/gallery/interior-2.jpg'),
-                  category: "تصميم داخلي",
-                  year: "2024"
-                },
-                {
-                  id: 6,
-                  title: "فندق فاخر",
-                  description: "تصميم داخلي لفندق فاخر في الدمام",
-                  image: require('../images/gallery/interior-3.jpg'),
-                  category: "تصميم داخلي",
-                  year: "2023"
-                }
-              ] : []),
-              
-              // المخططات التنفيذية
-              ...(activeTab === 'all' || activeTab === 'plans' ? [
-                {
-                  id: 7,
-                  title: "مخطط مجمع تجاري",
-                  description: "مخططات تنفيذية لمجمع تجاري كبير",
-                  image: require('../images/gallery/plans-1.jpg'),
-                  category: "مخططات تنفيذية",
-                  year: "2024"
-                },
-                {
-                  id: 8,
-                  title: "مخطط مجمع سكني",
-                  description: "مخططات تنفيذية لمجمع سكني متكامل",
-                  image: require('../images/gallery/plans-2.jpg'),
-                  category: "مخططات تنفيذية",
-                  year: "2024"
-                },
-                {
-                  id: 9,
-                  title: "مخطط مبنى إداري",
-                  description: "مخططات تنفيذية لمبنى إداري حديث",
-                  image: require('../images/gallery/plans-3.jpg'),
-                  category: "مخططات تنفيذية",
-                  year: "2023"
-                }
-              ] : []),
-              
-              // الهوية البصرية
-              ...(activeTab === 'all' || activeTab === 'branding' ? [
-                {
-                  id: 10,
-                  title: "هوية مطعم راقي",
-                  description: "هوية بصرية متكاملة لمطعم راقي",
-                  image: require('../images/gallery/branding-1.jpg'),
-                  category: "هوية بصرية",
-                  year: "2024"
-                },
-                {
-                  id: 11,
-                  title: "هوية شركة تقنية",
-                  description: "هوية بصرية لشركة تقنية ناشئة",
-                  image: require('../images/gallery/branding-2.jpg'),
-                  category: "هوية بصرية",
-                  year: "2024"
-                },
-                {
-                  id: 12,
-                  title: "هوية مؤسسة تعليمية",
-                  description: "هوية بصرية لمؤسسة تعليمية",
-                  image: require('../images/gallery/branding-3.jpg'),
-                  category: "هوية بصرية",
-                  year: "2023"
-                }
-              ] : [])
-            ].map((project, index) => (
+            {isLoadingProjects ? (
+              <div className="col-span-full text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <p className="mt-4 text-slate-600">جاري تحميل المشاريع...</p>
+              </div>
+            ) : getDisplayProjects().length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <div className="text-6xl mb-4">📂</div>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">لا توجد مشاريع حالياً</h3>
+                <p className="text-slate-500">قم بإضافة مشاريع جديدة من لوحة التحكم</p>
+              </div>
+            ) : (
+              getDisplayProjects().map((project, index) => (
               <div
                 key={project.id}
                 className="group bg-white/90 backdrop-blur-lg rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-emerald-100/50 hover:border-emerald-300/50 transform hover:-translate-y-2 hover:scale-105"
               >
                 <div className="relative overflow-hidden">
+                  {project.image ? (
                   <img
                     src={project.image}
                     alt={project.title}
@@ -1169,6 +879,17 @@ Thank you`;
                       e.target.nextSibling.style.display = 'flex';
                     }}
                   />
+                  ) : (
+                    <div className="w-full h-64 bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
+                      <span className="text-8xl">{project.emoji || '🏗️'}</span>
+                    </div>
+                  )}
+                  
+                  {/* Fallback display for broken images */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center" style={{display: 'none'}}>
+                    <span className="text-8xl">{project.emoji || '🏗️'}</span>
+                  </div>
+                  
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <div className="text-center text-white">
                       <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
@@ -1202,7 +923,8 @@ Thank you`;
                   </p>
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Call to Action */}
@@ -1427,62 +1149,24 @@ Thank you`;
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-16">
-            {[
-              {
-                name: "أحمد محمد",
-                position: "المدير التنفيذي",
-                specialization: "التصميم المعماري",
-                experience: "15+ سنة خبرة",
-                image: require('../images/team/ahmed-mohamed.jpg'),
-                description: "خبير في التصميم المعماري والتخطيط الحضري مع خبرة واسعة في المشاريع الكبرى",
-                gradient: "from-emerald-500 to-teal-500"
-              },
-              {
-                name: "فاطمة السعيد",
-                position: "مديرة التصميم الداخلي",
-                specialization: "التصميم الداخلي",
-                experience: "12+ سنة خبرة",
-                image: require('../images/team/fatima-saeed.jpg'),
-                description: "مصممة داخلية مبدعة متخصصة في تصميم المساحات التجارية والسكنية",
-                gradient: "from-teal-500 to-cyan-500"
-              },
-              {
-                name: "محمد العلي",
-                position: "مدير تطوير العلامات التجارية",
-                specialization: "الهوية البصرية",
-                experience: "10+ سنة خبرة",
-                image: require('../images/team/mohammed-ali.jpg'),
-                description: "خبير في تطوير العلامات التجارية والهوية البصرية للشركات والمؤسسات",
-                gradient: "from-stone-400 to-emerald-500"
-              },
-              {
-                name: "نورا أحمد",
-                position: "مديرة الاستشارات",
-                specialization: "الاستشارات الإدارية",
-                experience: "8+ سنة خبرة",
-                image: require('../images/team/nora-ahmed.jpg'),
-                description: "مستشارة متخصصة في الاستشارات الإدارية والتشغيلية للشركات",
-                gradient: "from-emerald-600 to-teal-600"
-              },
-              {
-                name: "خالد المطيري",
-                position: "مدير التخطيط الحضري",
-                specialization: "التخطيط الحضري",
-                experience: "13+ سنة خبرة",
-                image: require('../images/team/khalid-mutairi.jpg'),
-                description: "مهندس تخطيط حضري متخصص في تطوير المدن والمجمعات السكنية",
-                gradient: "from-teal-600 to-emerald-600"
-              },
-              {
-                name: "سارة النعيمي",
-                position: "مديرة التصميم التقني",
-                specialization: "التصميم التقني",
-                experience: "7+ سنة خبرة",
-                image: require('../images/team/sara-naimi.jpg'),
-                description: "مصممة تقنية متخصصة في تطوير الحلول التقنية والأنظمة الذكية",
-                gradient: "from-emerald-700 to-teal-700"
-              }
-            ].map((member, index) => (
+            {isLoadingTeam ? (
+              <div className="col-span-full flex justify-center items-center py-16">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+                  <p className="text-slate-600">جاري تحميل فريق العمل...</p>
+                </div>
+              </div>
+            ) : firebaseTeam.length === 0 ? (
+              <div className="col-span-full text-center py-16">
+                <div className="text-slate-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">لا يوجد أعضاء في الفريق</h3>
+                <p className="text-slate-500">سيتم إضافة فريق العمل قريباً</p>
+              </div>
+            ) : firebaseTeam.map((member, index) => (
                   <div
                 key={index}
                 className="group relative bg-white/95 backdrop-blur-lg rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-emerald-100/50 hover:border-emerald-300/50 transform hover:-translate-y-2 hover:scale-102 overflow-hidden"
@@ -1492,16 +1176,18 @@ Thank you`;
                 <div className="relative z-10 text-center">
                   <div className="mb-8">
                     <div className="w-24 h-24 rounded-full overflow-hidden mx-auto group-hover:scale-110 transition-transform duration-300 shadow-lg border-4 border-white">
-                      <img
-                        src={member.image}
-                        alt={member.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className={`w-full h-full bg-gradient-to-r ${member.gradient} flex items-center justify-center text-4xl hidden`}>
+                      {member.image ? (
+                        <img
+                          src={member.image}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className="w-full h-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-4xl" style={{ display: member.image ? 'none' : 'flex' }}>
                         👤
                       </div>
                     </div>
@@ -1515,17 +1201,15 @@ Thank you`;
                     {member.position}
                   </p>
                   
-                  <p className="text-sm text-gray-500 mb-4 group-hover:text-gray-600 transition-colors duration-300">
-                    {member.specialization}
-                  </p>
+                  {member.bio && (
+                    <p className="text-sm text-gray-500 mb-4 group-hover:text-gray-600 transition-colors duration-300 leading-relaxed">
+                      {member.bio}
+                    </p>
+                  )}
                   
-                  <div className={`inline-block px-5 py-2 bg-gradient-to-r ${member.gradient} rounded-full text-white font-bold text-sm mb-6 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
-                    {member.experience}
+                  <div className="inline-block px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-white font-bold text-sm mb-6 group-hover:scale-105 transition-transform duration-300 shadow-md">
+                    عضو فريق
                   </div>
-                  
-                  <p className="text-gray-600 text-sm leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                    {member.description}
-                  </p>
                 </div>
                   </div>
                 ))}
@@ -1843,25 +1527,30 @@ Thank you`;
                   </h3>
                   
                   <div className="space-y-8">
-                    {[
+                    {isLoadingContact ? (
+                      <div className="flex justify-center items-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                        <span className="mr-3 text-slate-600">جاري تحميل معلومات التواصل...</span>
+                      </div>
+                    ) : [
                       { 
                         icon: <Phone size={24} />, 
                         label: "الهاتف", 
-                        value: "+966 50 123 4567", 
+                        value: firebaseContactInfo.phone || "+966 50 123 4567", 
                         gradient: "from-emerald-500 to-teal-500",
                         dir: "ltr"
                       },
                       { 
                         icon: <Mail size={24} />, 
                         label: "البريد الإلكتروني", 
-                        value: "info@tramuz-design.com", 
+                        value: firebaseContactInfo.email || "info@tramuz-design.com", 
                         gradient: "from-teal-500 to-cyan-500",
                         dir: "ltr"
                       },
                       { 
                         icon: <MapPin size={24} />, 
                         label: "العنوان", 
-                        value: "الرياض حي النرجس شارع الملك فهد مبنى التصميم الحديث - الطابق الثالث", 
+                        value: firebaseContactInfo.address || "الرياض حي النرجس شارع الملك فهد مبنى التصميم الحديث - الطابق الثالث", 
                         gradient: "from-emerald-600 to-teal-600"
                       }
                     ].map((item, index) => (
@@ -2107,18 +1796,34 @@ Thank you`;
                 <div className="flex items-center space-x-reverse space-x-4">
                   <span className="text-gray-400 text-sm font-medium">تابعنا على:</span>
                   <div className="flex items-center space-x-reverse space-x-3">
-                    <a href="#" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">f</span>
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">t</span>
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">i</span>
-                    </a>
-                    <a href="#" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">l</span>
-                    </a>
+                    {firebaseContactInfo.facebook && (
+                      <a href={firebaseContactInfo.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <span className="text-white text-sm">f</span>
+                      </a>
+                    )}
+                    {firebaseContactInfo.twitter && (
+                      <a href={firebaseContactInfo.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <span className="text-white text-sm">t</span>
+                      </a>
+                    )}
+                    {firebaseContactInfo.instagram && (
+                      <a href={firebaseContactInfo.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <span className="text-white text-sm">i</span>
+                      </a>
+                    )}
+                    {firebaseContactInfo.linkedin && (
+                      <a href={firebaseContactInfo.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <span className="text-white text-sm">l</span>
+                      </a>
+                    )}
+                    {firebaseContactInfo.youtube && (
+                      <a href={firebaseContactInfo.youtube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <span className="text-white text-sm">y</span>
+                      </a>
+                    )}
+                    {!firebaseContactInfo.facebook && !firebaseContactInfo.twitter && !firebaseContactInfo.instagram && !firebaseContactInfo.linkedin && !firebaseContactInfo.youtube && (
+                      <span className="text-gray-500 text-sm">سيتم إضافة الروابط قريباً</span>
+                    )}
                   </div>
                 </div>
             </div>
@@ -2161,8 +1866,8 @@ Thank you`;
                     <Phone size={18} className="text-emerald-400 mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-gray-300 text-sm font-medium">الهاتف</p>
-                      <a href="tel:+966550500410" className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
-                        +966 55 050 0410
+                      <a href={`tel:${firebaseContactInfo.phone || '+966550500410'}`} className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
+                        {firebaseContactInfo.phone || '+966 55 050 0410'}
                       </a>
             </div>
           </div>
@@ -2171,8 +1876,8 @@ Thank you`;
                     <Mail size={18} className="text-emerald-400 mt-1 flex-shrink-0" />
                     <div>
                       <p className="text-gray-300 text-sm font-medium">البريد الإلكتروني</p>
-                      <a href="mailto:info@tramuz-design.com" className="text-white hover:text-emerald-400 transition-colors duration-300 text-sm" dir="ltr">
-                        info@tramuz-design.com
+                      <a href={`mailto:${firebaseContactInfo.email || 'info@tramuz-design.com'}`} className="text-white hover:text-emerald-400 transition-colors duration-300 text-sm" dir="ltr">
+                        {firebaseContactInfo.email || 'info@tramuz-design.com'}
                       </a>
                 </div>
                   </div>
@@ -2182,12 +1887,24 @@ Thank you`;
                     <div>
                       <p className="text-gray-300 text-sm font-medium">العنوان</p>
                       <p className="text-white text-sm leading-relaxed">
-                        الرياض حي النرجس<br />
-                        شارع الملك فهد<br />
-                        مبنى التصميم الحديث - الطابق الثالث
+                        {firebaseContactInfo.address || 'الرياض حي النرجس\nشارع الملك فهد\nمبنى التصميم الحديث - الطابق الثالث'}
                       </p>
                     </div>
                   </div>
+                  
+                  {firebaseContactInfo.whatsapp && (
+                    <div className="flex items-start space-x-reverse space-x-3">
+                      <div className="w-4 h-4 bg-green-500 rounded-full mt-1 flex-shrink-0 flex items-center justify-center">
+                        <span className="text-white text-xs">💬</span>
+                      </div>
+                      <div>
+                        <p className="text-gray-300 text-sm font-medium">الواتساب</p>
+                        <a href={`https://wa.me/${firebaseContactInfo.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
+                          {firebaseContactInfo.whatsapp}
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2219,122 +1936,7 @@ Thank you`;
         </div>
       </footer>
 
-      {/* Service Details Modal */}
-      {isModalOpen && selectedService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
-          
-          {/* Modal Content */}
-          <div className="relative bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
-            {/* Header */}
-            <div className={`p-8 ${selectedService.bgGradient} rounded-t-3xl relative overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent"></div>
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center space-x-reverse space-x-4">
-                  <div className={`w-16 h-16 bg-gradient-to-r ${selectedService.gradient} rounded-2xl flex items-center justify-center text-white shadow-xl`}>
-                    {selectedService.icon}
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-black text-gray-900 mb-2">{selectedService.title}</h2>
-                    <p className="text-gray-700 text-lg">{selectedService.description}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-gray-700 hover:bg-white/30 transition-all duration-200"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="p-8 space-y-8">
-              {/* Full Description */}
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-slate-500 rounded-xl flex items-center justify-center ml-3">
-                    <span className="text-white font-bold text-sm">📝</span>
-                  </div>
-                  الوصف الشامل
-                </h3>
-                <p className="text-gray-700 text-lg leading-relaxed">{selectedService.fullDescription}</p>
-              </div>
-              
-              {/* Features */}
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-slate-500 rounded-xl flex items-center justify-center ml-3">
-                    <span className="text-white font-bold text-sm">✨</span>
-                  </div>
-                  المميزات والخدمات
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {selectedService.features.map((feature, index) => (
-                    <div key={index} className="flex items-start space-x-reverse space-x-3 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors duration-200">
-                      <div className={`w-3 h-3 bg-gradient-to-r ${selectedService.gradient} rounded-full mt-2 flex-shrink-0`}></div>
-                      <span className="text-gray-700">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Process */}
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-slate-500 rounded-xl flex items-center justify-center ml-3">
-                    <span className="text-white font-bold text-sm">🔄</span>
-                  </div>
-                  خطوات العمل
-                </h3>
-                <div className="space-y-4">
-                  {selectedService.process.map((step, index) => (
-                    <div key={index} className="flex items-center space-x-reverse space-x-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                      <div className="w-8 h-8 bg-slate-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <span className="text-gray-700 font-medium">{step}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Examples */}
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-slate-500 rounded-xl flex items-center justify-center ml-3">
-                    <span className="text-white font-bold text-sm">🎯</span>
-                  </div>
-                  أمثلة على المشاريع
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {selectedService.examples.map((example, index) => (
-                    <div key={index} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 hover:bg-slate-100 transition-all duration-200">
-                      <span className="text-gray-700">{example}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* CTA */}
-              <div className="text-center pt-8">
-                <button
-                  onClick={() => scrollToSection('contact')}
-                    className="px-10 py-5 bg-slate-700 text-white font-bold text-lg rounded-2xl hover:shadow-2xl hover:bg-slate-600 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3 mx-auto"
-                >
-                  <Sparkles size={20} />
-                    <span>اطلب استشارة</span>
-                  <ArrowRight size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* تم حذف مودال تفاصيل الخدمة */}
 
       {/* Cart Sidebar */}
       {isCartOpen && (

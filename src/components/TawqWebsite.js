@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Play, Users, Award, Calendar, Sparkles, Phone, Mail, MapPin, Menu, X, Star, ArrowRight, ArrowLeft, Globe, Zap, Target, Heart } from 'lucide-react';
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 const TramuzWebsite = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -8,6 +10,8 @@ const TramuzWebsite = () => {
   const [scrolled, setScrolled] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [services, setServices] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,6 +39,24 @@ const TramuzWebsite = () => {
     };
   }, [isModalOpen]);
 
+  useEffect(() => {
+    const fetchServices = async () => {
+      const querySnapshot = await getDocs(collection(db, "services"));
+      const servicesData = querySnapshot.docs.map((doc) => doc.data());
+      setServices(servicesData);
+    };
+
+    const fetchProjects = async () => {
+      const querySnapshot = await getDocs(collection(db, "projects"));
+      const projectsData = querySnapshot.docs.map((doc) => doc.data());
+      console.log("Fetched projects:", projectsData); // Debugging
+      setProjects(projectsData);
+    };
+
+    fetchServices();
+    fetchProjects();
+  }, []);
+
   const heroSlides = [
     {
       title: "نحن لا نُنظّم فعاليات، نصنع تجارب",
@@ -56,138 +78,7 @@ const TramuzWebsite = () => {
     }
   ];
 
-    const services = [
-    { 
-      title: "تنظيم الفعاليات والمعارض والمؤتمرات", 
-      description: "خدمة شاملة ومتكاملة لتنظيم جميع أنواع الفعاليات والمعارض والمؤتمرات بمعايير عالمية وجودة استثنائية", 
-      icon: <Sparkles size={28} />, 
-      gradient: "from-purple-500 via-blue-500 to-cyan-500", 
-      bgGradient: "from-purple-50 via-blue-50 to-cyan-50", 
-      hoverGradient: "from-purple-600 via-blue-600 to-cyan-600",
-      details: [
-        "تخطيط وإدارة شاملة للفعاليات",
-        "تصميم وتنفيذ إبداعي",
-        "خدمات لوجستية متكاملة",
-        "إدارة الحضور والضيوف",
-        "تقارير شاملة وتقييم النجاح"
-      ],
-      fullDescription: "نقدم خدمة شاملة ومتكاملة لتنظيم جميع أنواع الفعاليات والمعارض والمؤتمرات بمعايير عالمية وجودة استثنائية. نبدأ بفهم متطلباتك وأهدافك، ثم نضع خطة استراتيجية شاملة تشمل كل التفاصيل من التصميم إلى التنفيذ، مع ضمان نجاح كل حدث من خلال تخطيط دقيق وتنفيذ متميز.",
-      features: [
-        "تخطيط استراتيجي شامل للفعالية/المعرض/المؤتمر",
-        "تصميم إبداعي يحاكي الحواس ويجسد الهوية",
-        "إدارة لوجستية متقدمة ومتكاملة",
-        "تقنيات حديثة وتفاعلية",
-        "إدارة الحضور والضيوف والمشاركين",
-        "تصميم أجنحة ومساحات عرض إبداعية",
-        "تغطية إعلامية شاملة",
-        "تقارير مفصلة وتقييم النجاح"
-      ],
-      process: [
-        "الاستماع لفكرتك وتحديد الأهداف",
-        "وضع خطة استراتيجية شاملة",
-        "تصميم وتطوير المفهوم الإبداعي والهوية البصرية",
-        "تخطيط المساحات والأجنحة (للمعارض والمؤتمرات)",
-        "التنفيذ والدعم الفني",
-        "المتابعة والتقييم والتطوير المستمر"
-      ],
-      examples: [
-        "الفعاليات الحكومية والرسمية",
-        "المؤتمرات والمعارض الدولية",
-        "معارض تجارية وصناعية",
-        "مؤتمرات تقنية وتعليمية",
-        "معارض عقارية واستثمارية",
-        "مؤتمرات طبية وعلمية",
-        "معارض سياحية وترفيهية",
-        "افتتاحات الشركات والمؤسسات",
-        "حفلات الشركات والمناسبات الخاصة",
-        "المهرجانات والفعاليات الثقافية"
-      ]
-    },
-    { 
-      title: "التسويق الرقمي", 
-      description: "حلول متكاملة للتسويق الرقمي تواكب السوق السعودي والخليجي", 
-      icon: <Target size={28} />, 
-      gradient: "from-emerald-500 via-teal-500 to-cyan-500", 
-      bgGradient: "from-emerald-50 to-teal-50", 
-      hoverGradient: "from-emerald-600 to-teal-600",
-      details: [
-        "إدارة حسابات التواصل الاجتماعي",
-        "استراتيجية وخطط تسويقية",
-        "إعلانات مدفوعة متقدمة",
-        "محتوى إبداعي ملهم",
-        "تعاون مع المؤثرين",
-        "SEO & SEM متخصص"
-      ],
-      fullDescription: "نقدم حلول تسويق رقمي متكاملة ومتطورة تواكب أحدث التقنيات والاتجاهات العالمية. نركز على تحقيق نتائج ملموسة وزيادة المبيعات من خلال استراتيجيات تسويقية ذكية ومبتكرة.",
-      features: [
-        "إدارة حسابات التواصل الاجتماعي",
-        "استراتيجية تسويقية شاملة",
-        "إعلانات مدفوعة متقدمة (Google Ads, Facebook Ads)",
-        "محتوى إبداعي ومؤثر",
-        "تعاون مع المؤثرين والمشاهير",
-        "تحسين محركات البحث (SEO)",
-        "إعلانات محركات البحث (SEM)",
-        "تحليل البيانات والتقارير"
-      ],
-      process: [
-        "تحليل السوق والمنافسين",
-        "وضع استراتيجية تسويقية شاملة",
-        "إنشاء المحتوى والإعلانات",
-        "إدارة الحملات الإعلانية",
-        "المتابعة والتحسين المستمر"
-      ],
-      examples: [
-        "إدارة حسابات الشركات على وسائل التواصل",
-        "حملات إعلانية مدفوعة",
-        "تسويق المحتوى والمدونات",
-        "تسويق المؤثرين",
-        "تحسين محركات البحث"
-      ]
-    },
-    { 
-      title: "الإنتاج الفني", 
-      description: "خدمات إنتاج متكاملة لمختلف أشكال المحتوى المرئي والمسموع", 
-      icon: <Zap size={28} />, 
-      gradient: "from-orange-500 via-amber-500 to-yellow-500", 
-      bgGradient: "from-orange-50 to-amber-50", 
-      hoverGradient: "from-orange-600 to-amber-600",
-      details: [
-        "التصوير الإعلاني الاحترافي",
-        "الأفلام القصيرة والدعائية",
-        "المونتاج والإخراج البصري",
-        "التصوير الجوي (Drone)",
-        "التغطية الإعلامية الشاملة",
-        "إنتاج المحتوى الرقمي"
-      ],
-      fullDescription: "نقدم خدمات إنتاج فني متكاملة ومتطورة تشمل التصوير والإنتاج المرئي والمسموع. نستخدم أحدث التقنيات والمعدات لضمان جودة عالية ومحتوى إبداعي يحقق أهدافك التسويقية.",
-      features: [
-        "التصوير الإعلاني الاحترافي",
-        "إنتاج الأفلام القصيرة والدعائية",
-        "المونتاج والإخراج البصري المتقدم",
-        "التصوير الجوي باستخدام الطائرات المسيرة",
-        "التغطية الإعلامية الشاملة للفعاليات",
-        "إنتاج المحتوى الرقمي والتفاعلي",
-        "تصميم الرسومات والمواد البصرية",
-        "تسجيل وإنتاج الصوتيات"
-      ],
-      process: [
-        "فهم متطلبات المشروع",
-        "تطوير المفهوم الإبداعي",
-        "التخطيط والإعداد",
-        "التنفيذ والإنتاج",
-        "المونتاج والمراجعة النهائية"
-      ],
-      examples: [
-        "أفلام إعلانية للشركات",
-        "مقاطع فيديو للمنتجات",
-        "تغطية الفعاليات والمعارض",
-        "محتوى وسائل التواصل الاجتماعي",
-        "أفلام وثائقية وتقارير"
-      ]
-    }
-  ];
-
-  const stats = [
+    const stats = [
     { number: "500+", label: "فعالية ناجحة", icon: <Target size={32} />, color: "from-purple-500 to-pink-500" },
     { number: "200+", label: "عميل راضٍ", icon: <Heart size={32} />, color: "from-rose-500 to-pink-500" },
     { number: "8", label: "سنوات خبرة", icon: <Award size={32} />, color: "from-blue-500 to-cyan-500" },
@@ -584,50 +475,7 @@ const TramuzWebsite = () => {
 
           {/* Videos Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-            {[
-              {
-                title: "فعالية وزارة التجارة السنوية",
-                description: "معرض تجاري ضخم بمعايير عالمية",
-                thumbnail: "🏛️",
-                videoId: "dQw4w9WgXcQ",
-                category: "فعاليات حكومية"
-              },
-              {
-                title: "ملتقى أرامكو للطاقة",
-                description: "فعالية تقنية متطورة مع أحدث التقنيات",
-                thumbnail: "🛢️",
-                videoId: "9bZkp7q19f0",
-                category: "فعاليات تقنية"
-              },
-              {
-                title: "معرض سابك للصناعات",
-                description: "معرض صناعي تفاعلي بمساحة 5000 متر",
-                thumbnail: "🏭",
-                videoId: "kJQP7kiw5Fk",
-                category: "معارض صناعية"
-              },
-              {
-                title: "فعالية البنك الأهلي",
-                description: "افتتاح فرع جديد بتصميم عصري",
-                thumbnail: "🏦",
-                videoId: "y6120QOlsfU",
-                category: "فعاليات مؤسسية"
-              },
-              {
-                title: "ملتقى جامعة الملك سعود",
-                description: "فعالية تعليمية تفاعلية للطلاب",
-                thumbnail: "🎓",
-                videoId: "dQw4w9WgXcQ",
-                category: "فعاليات تعليمية"
-              },
-              {
-                title: "مهرجان مدارس الرياض",
-                description: "مهرجان سنوي للأطفال والعائلات",
-                thumbnail: "🏫",
-                videoId: "9bZkp7q19f0",
-                category: "مهرجانات"
-              }
-            ].map((video, index) => (
+            {projects.map((project, index) => (
               <div
                 key={index}
                 className="group bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/10 hover:border-white/30 transform hover:-translate-y-1 hover:scale-102 transition-all duration-200 relative overflow-hidden"
@@ -639,7 +487,7 @@ const TramuzWebsite = () => {
                   {/* Video Thumbnail */}
                   <div className="relative mb-6 group cursor-pointer">
                     <div className="w-full h-48 bg-gray-700 rounded-2xl flex items-center justify-center text-6xl mb-4 group-hover:scale-105 transition-transform duration-200">
-                      {video.thumbnail}
+                      {project.thumbnail}
                     </div>
                     
                     {/* Play Button Overlay */}
@@ -652,23 +500,20 @@ const TramuzWebsite = () => {
                     {/* Category Badge */}
                     <div className="absolute top-4 right-4">
                       <span className="px-3 py-1 bg-gray-600 text-white text-xs font-bold rounded-full">
-                        {video.category}
+                        {project.category}
                       </span>
                     </div>
                   </div>
                   
                   {/* Video Info */}
-                  <h3 className="text-xl font-black text-white mb-3 group-hover:text-gray-300 transition-colors duration-200">
-                    {video.title}
-                  </h3>
-                  
+                  <h3 className="text-xl font-bold mb-2">{project.title}</h3>
                   <p className="text-gray-300 mb-4 group-hover:text-gray-200 transition-colors duration-200">
-                    {video.description}
+                    {project.description}
                   </p>
                   
                   {/* Watch Button */}
                   <button 
-                    onClick={() => window.open(`https://www.youtube.com/watch?v=${video.videoId}`, '_blank')}
+                    onClick={() => window.open(`https://www.youtube.com/watch?v=${project.videoId}`, '_blank')}
                     className="w-full px-6 py-3 bg-gray-600 text-white font-bold rounded-2xl hover:shadow-lg hover:bg-gray-500 transform hover:scale-102 transition-all duration-150 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Play size={20} />
