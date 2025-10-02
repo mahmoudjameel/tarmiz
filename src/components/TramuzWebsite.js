@@ -40,6 +40,10 @@ const TramuzWebsite = () => {
     youtube: ""
   });
   const [isLoadingContact, setIsLoadingContact] = useState(false);
+  const [firebaseCategories, setFirebaseCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
 
   // Translation function
   const t = (key) => {
@@ -121,6 +125,23 @@ const TramuzWebsite = () => {
     }
   };
 
+  // تحميل التصنيفات من Firebase
+  const fetchCategoriesFromFirebase = async () => {
+    try {
+      setIsLoadingCategories(true);
+      const querySnapshot = await getDocs(collection(db, "categories"));
+      const categoriesList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFirebaseCategories(categoriesList);
+    } catch (error) {
+      console.error("خطأ في تحميل التصنيفات من Firebase: ", error);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
   // دالة لتحويل بيانات Firebase إلى تنسيق مناسب للعرض
   const getDisplayProjects = () => {
     // تحويل بيانات Firebase إلى التنسيق المطلوب
@@ -128,45 +149,59 @@ const TramuzWebsite = () => {
       let categoryDisplay = "";
       let tabId = "";
       
-      // تحويل category من Firebase إلى التنسيق المحلي
-      switch(project.category) {
-        case "exterior-design":
-          categoryDisplay = "تصميم خارجي";
-          tabId = "exterior";
-          break;
-        case "interior-design":
-          categoryDisplay = "تصميم داخلي";
-          tabId = "interior";
-          break;
-        case "execution-plans":
-          categoryDisplay = "مخططات تنفيذية";
-          tabId = "plans";
-          break;
-        case "branding":
-          categoryDisplay = "هوية بصرية";
-          tabId = "branding";
-          break;
-        default:
-          categoryDisplay = project.category;
-          tabId = "all";
+      // العثور على التصنيف من التصنيفات المحملة
+      const categoryData = firebaseCategories.find(cat => cat.id === project.category);
+      
+      if (categoryData) {
+        categoryDisplay = language === 'en' ? (categoryData.name_en || categoryData.name) : categoryData.name;
+        tabId = project.category;
+      } else {
+        // fallback للتصنيفات القديمة
+        switch(project.category) {
+          case "exterior-design":
+            categoryDisplay = t('works.tabs.1');
+            tabId = "exterior";
+            break;
+          case "interior-design":
+            categoryDisplay = t('works.tabs.2');
+            tabId = "interior";
+            break;
+          case "execution-plans":
+            categoryDisplay = t('works.tabs.3');
+            tabId = "plans";
+            break;
+          case "branding":
+            categoryDisplay = t('works.tabs.4');
+            tabId = "branding";
+            break;
+          default:
+            categoryDisplay = project.category;
+            tabId = "all";
+        }
       }
+
+      // العثور على الصورة الرئيسية
+      const primaryImage = project.images && project.images.length > 0 ? 
+        project.images.find(img => img.isPrimary) || project.images[0] : 
+        null;
 
       return {
         id: project.id,
-        title: project.title,
-        description: project.description,
-        image: project.thumbnail.startsWith('http') ? project.thumbnail : null, // إذا كان رابط صورة
-        emoji: project.thumbnail.startsWith('http') ? null : project.thumbnail, // إذا كان emoji
+        title: language === 'en' ? (project.title_en || project.title) : project.title,
+        description: language === 'en' ? (project.description_en || project.description) : project.description,
+        image: primaryImage ? primaryImage.url : (project.thumbnail && project.thumbnail.startsWith('http') ? project.thumbnail : null),
+        emoji: !primaryImage && project.thumbnail && !project.thumbnail.startsWith('http') ? project.thumbnail : null,
         category: categoryDisplay,
         categoryId: tabId,
-        year: project.year
+        year: project.year,
+        images: project.images || [] // حفظ جميع الصور
       };
     });
 
     // تصفية المشاريع حسب التبويب النشط
     return convertedProjects.filter(project => {
       if (activeTab === 'all') return true;
-      return project.categoryId === activeTab;
+      return project.categoryId === activeTab || project.category === activeTab;
     });
   };
 
@@ -175,18 +210,18 @@ const TramuzWebsite = () => {
     // استخدام الخدمات من Firebase فقط (إلغاء الخدمات الثابتة)
     return firebaseServices.map(service => ({
       id: `firebase-${service.id}`,
-      title: service.title,
-      description: service.description,
+      title: language === 'en' ? (service.title_en || service.title) : service.title,
+      description: language === 'en' ? (service.description_en || service.description) : service.description,
       price: service.price || 0,
       icon: <span style={{fontSize: '28px'}}>{service.icon}</span>,
       gradient: "from-emerald-600 via-emerald-700 to-emerald-800",
       bgGradient: "from-emerald-50 to-emerald-100",
       hoverGradient: "from-emerald-700 via-emerald-800 to-emerald-900",
-      details: [service.description], // تحويل إلى مصفوفة
-      fullDescription: service.description,
-      features: [service.description], // تحويل إلى مصفوفة
-      process: [service.description], // تحويل إلى مصفوفة
-      examples: [service.description], // تحويل إلى مصفوفة
+      details: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
+      fullDescription: language === 'en' ? (service.description_en || service.description) : service.description,
+      features: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
+      process: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
+      examples: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
       isFirebase: true
     }));
   };
@@ -205,6 +240,7 @@ const TramuzWebsite = () => {
     fetchServicesFromFirebase();
     fetchTeamFromFirebase();
     fetchContactInfoFromFirebase();
+    fetchCategoriesFromFirebase();
   }, []);
 
   // تم حذف useEffect للمودال
@@ -321,20 +357,20 @@ const TramuzWebsite = () => {
 
   const sendToWhatsApp = () => {
     const message = language === 'ar' 
-      ? `مرحباً، أريد طلب الخدمات التالية من شركة ترمُز:
+      ? `${t('contact.whatsappMessageHeader')}
 
-${cart.map(item => `• ${item.title} - الكمية: ${item.quantity} - السعر: ${item.price} ريال`).join('\n')}
+${cart.map(item => `• ${item.title} - ${t('cart.quantity')}: ${item.quantity} - ${t('services.price')}: ${item.price} ${t('services.sar')}`).join('\n')}
 
-المجموع الكلي: ${getCartTotal()} ريال
+${t('cart.total')}: ${getCartTotal()} ${t('services.sar')}
 
-شكراً لكم`
-      : `Hello, I would like to order the following services from Tramuz:
+${t('contact.whatsappThanks')}`
+      : `${t('contact.whatsappMessageHeader')}
 
-${cart.map(item => `• ${item.title} - Quantity: ${item.quantity} - Price: ${item.price} SAR`).join('\n')}
+${cart.map(item => `• ${item.title} - ${t('cart.quantity')}: ${item.quantity} - ${t('services.price')}: ${item.price} ${t('services.sar')}`).join('\n')}
 
-Total: ${getCartTotal()} SAR
+${t('cart.total')}: ${getCartTotal()} ${t('services.sar')}
 
-Thank you`;
+${t('contact.whatsappThanks')}`;
 
     const whatsappUrl = `https://wa.me/966551448433?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -523,7 +559,7 @@ Thank you`;
                 className="group px-10 py-5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-lg rounded-2xl hover:shadow-xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
               >
                 <Phone className="transition-transform duration-300" size={24} />
-                <span>اتصل بنا</span>
+                <span>{t('cta.contactUs')}</span>
                 <ArrowLeft className="group-hover:-translate-x-1 transition-transform duration-150" size={20} />
               </button>
               <button 
@@ -531,7 +567,7 @@ Thank you`;
                 className="px-10 py-5 bg-slate-200/20 backdrop-blur-sm text-white font-bold text-lg rounded-2xl border-2 border-slate-300/40 hover:bg-slate-200/30 hover:border-slate-300/60 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
               >
                 <Play size={20} />
-                <span>عرض الأعمال</span>
+                <span>{t('cta.viewWorks')}</span>
               </button>
             </div>
 
@@ -557,7 +593,7 @@ Thank you`;
 
         {/* Scroll Indicator */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-          <div className="text-white/80 text-sm mb-2">اكتشف المزيد</div>
+          <div className="text-white/80 text-sm mb-2">{t('cta.discoverMore')}</div>
           <ChevronDown className="text-white mx-auto" size={32} />
         </div>
       </section>
@@ -772,7 +808,7 @@ Thank you`;
                     >
                       <ShoppingCart size={18} className="ml-2 group-hover:scale-110 transition-transform duration-200" />
                       <span>{t('services.addToCart')}</span>
-                    </button>
+                  </button>
                   </div>
                 </div>
               </div>
@@ -785,9 +821,9 @@ Thank you`;
               <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent"></div>
               <div className="relative z-10">
                 <div className="text-4xl mb-6">🏆</div>
-                <h3 className="text-3xl font-black text-black mb-6">معرض أعمالنا</h3>
+                <h3 className="text-3xl font-black text-black mb-6">{t('works.badge')}</h3>
                 <p className="text-xl text-black/80 mb-10 max-w-2xl mx-auto">
-                  اكتشف كيف ساعدنا عملاءنا في تحقيق أهدافهم من خلال خدماتنا المميزة في التصميم والاستشارات
+                  {t('works.subtitle')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button 
@@ -795,7 +831,7 @@ Thank you`;
                     className="px-10 py-5 bg-white/20 backdrop-blur-sm text-black font-bold text-lg rounded-2xl border border-black/30 hover:bg-white/30 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Play size={20} />
-                    <span>شاهد أعمالنا</span>
+                    <span>{t('works.viewAll')}</span>
                   </button>
                 </div>
               </div>
@@ -828,11 +864,12 @@ Thank you`;
           {/* Tabs */}
           <div className="flex flex-wrap justify-center gap-4 mb-16">
             {[
-              { id: 'all', label: 'جميع المشاريع', icon: '🎯' },
-              { id: 'exterior', label: 'تصميم خارجي', icon: '🏢' },
-              { id: 'interior', label: 'تصميم داخلي', icon: '🏠' },
-              { id: 'plans', label: 'مخططات تنفيذية', icon: '📐' },
-              { id: 'branding', label: 'هوية بصرية', icon: '🎨' }
+              { id: 'all', label: t('works.tabs.0'), icon: '🎯' },
+              ...firebaseCategories.map(cat => ({
+                id: cat.id,
+                label: language === 'en' ? (cat.name_en || cat.name) : cat.name,
+                icon: '🏗️'
+              }))
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -854,19 +891,23 @@ Thank you`;
             {isLoadingProjects ? (
               <div className="col-span-full text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                <p className="mt-4 text-slate-600">جاري تحميل المشاريع...</p>
+                <p className="mt-4 text-slate-600">{t('states.loadingProjects')}</p>
               </div>
             ) : getDisplayProjects().length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <div className="text-6xl mb-4">📂</div>
-                <h3 className="text-xl font-bold text-slate-700 mb-2">لا توجد مشاريع حالياً</h3>
-                <p className="text-slate-500">قم بإضافة مشاريع جديدة من لوحة التحكم</p>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">{t('states.noProjects')}</h3>
+                <p className="text-slate-500">{t('states.addProjectsFromDashboard')}</p>
               </div>
             ) : (
               getDisplayProjects().map((project, index) => (
               <div
                 key={project.id}
-                className="group bg-white/90 backdrop-blur-lg rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-emerald-100/50 hover:border-emerald-300/50 transform hover:-translate-y-2 hover:scale-105"
+                className="group bg-white/90 backdrop-blur-lg rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-emerald-100/50 hover:border-emerald-300/50 transform hover:-translate-y-2 hover:scale-105 cursor-pointer"
+                onClick={() => {
+                  setSelectedProject(project);
+                  setIsProjectModalOpen(true);
+                }}
               >
                 <div className="relative overflow-hidden">
                   {project.image ? (
@@ -895,7 +936,7 @@ Thank you`;
                       <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
                         <Play className="text-white" size={24} />
                     </div>
-                      <p className="text-sm font-bold">عرض المشروع</p>
+                      <p className="text-sm font-bold">{t('works.viewProject')}</p>
                       </div>
                     </div>
                     
@@ -1107,9 +1148,9 @@ Thank you`;
                 <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full flex items-center justify-center mx-auto mb-8">
                   <Users className="text-white" size={32} />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">انضم إلى عملائنا</h3>
+                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">{t('clients.joinClientsTitle')}</h3>
                 <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-                  كن جزءاً من قصة نجاحنا واسمح لنا بمساعدتك في تحقيق أهدافك
+                  {t('clients.joinClientsDescription')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
                   <button 
@@ -1117,7 +1158,7 @@ Thank you`;
                     className="px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xl rounded-2xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Users size={24} />
-                    <span>ابدأ مشروعك معنا</span>
+                    <span>{t('clients.joinClientsButton')}</span>
                   </button>
                 </div>
               </div>
@@ -1153,7 +1194,7 @@ Thank you`;
               <div className="col-span-full flex justify-center items-center py-16">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-                  <p className="text-slate-600">جاري تحميل فريق العمل...</p>
+                  <p className="text-slate-600">{t('states.loadingTeam')}</p>
                 </div>
               </div>
             ) : firebaseTeam.length === 0 ? (
@@ -1163,8 +1204,8 @@ Thank you`;
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-slate-700 mb-2">لا يوجد أعضاء في الفريق</h3>
-                <p className="text-slate-500">سيتم إضافة فريق العمل قريباً</p>
+                <h3 className="text-xl font-bold text-slate-700 mb-2">{t('states.noTeam')}</h3>
+                <p className="text-slate-500">{t('states.teamComingSoon')}</p>
               </div>
             ) : firebaseTeam.map((member, index) => (
                   <div
@@ -1177,15 +1218,15 @@ Thank you`;
                   <div className="mb-8">
                     <div className="w-24 h-24 rounded-full overflow-hidden mx-auto group-hover:scale-110 transition-transform duration-300 shadow-lg border-4 border-white">
                       {member.image ? (
-                        <img
-                          src={member.image}
-                          alt={member.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
                       ) : null}
                       <div className="w-full h-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-4xl" style={{ display: member.image ? 'none' : 'flex' }}>
                         👤
@@ -1194,21 +1235,21 @@ Thank you`;
                   </div>
                   
                   <h3 className="text-2xl font-black text-gray-800 mb-3 group-hover:text-emerald-700 transition-colors duration-300">
-                    {member.name}
+                    {language === 'en' ? (member.name_en || member.name) : member.name}
                   </h3>
                   
                   <p className="text-lg font-bold text-emerald-600 mb-3 group-hover:text-emerald-700 transition-colors duration-300">
-                    {member.position}
+                    {language === 'en' ? (member.position_en || member.position) : member.position}
                   </p>
                   
                   {member.bio && (
                     <p className="text-sm text-gray-500 mb-4 group-hover:text-gray-600 transition-colors duration-300 leading-relaxed">
-                      {member.bio}
-                    </p>
+                      {language === 'en' ? (member.bio_en || member.bio) : member.bio}
+                  </p>
                   )}
                   
                   <div className="inline-block px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-white font-bold text-sm mb-6 group-hover:scale-105 transition-transform duration-300 shadow-md">
-                    عضو فريق
+                    {t('team.memberRole')}
                   </div>
                 </div>
                   </div>
@@ -1222,9 +1263,9 @@ Thank you`;
                 <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full flex items-center justify-center mx-auto mb-8">
                   <Users className="text-white" size={32} />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">انضم إلى فريقنا</h3>
+                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">{t('team.joinTeamTitle')}</h3>
                 <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-                  نحن نبحث عن المواهب المبدعة للانضمام إلى فريقنا المتميز
+                  {t('team.joinTeamDescription')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
                   <button 
@@ -1232,7 +1273,7 @@ Thank you`;
                     className="px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xl rounded-2xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Users size={24} />
-                    <span>انضم إلينا</span>
+                    <span>{t('team.joinTeamButton')}</span>
                   </button>
                 </div>
               </div>
@@ -1252,7 +1293,7 @@ Thank you`;
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8 border border-emerald-200">
-              🏆 إنجازاتنا المميزة
+              🏆 {t('stats.badge')}
             </div>
             <h2 className="text-5xl md:text-6xl font-black text-gray-800 mb-8">
                 {t('stats.badge')}
@@ -1308,9 +1349,9 @@ Thank you`;
                 <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full flex items-center justify-center mx-auto mb-8">
                   <Award className="text-white" size={32} />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">انضم إلى قصة نجاحنا</h3>
+                <h3 className="text-3xl md:text-4xl font-black mb-6 text-gray-800">{t('success.joinSuccessTitle')}</h3>
                 <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-                  دعنا نساعدك في تحقيق أهدافك ونضيف إنجازاً جديداً إلى سجلنا المتميز
+                  {t('success.joinSuccessDescription')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
                   <button 
@@ -1318,7 +1359,7 @@ Thank you`;
                     className="px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xl rounded-2xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Award size={24} />
-                    <span>ابدأ مشروعك معنا</span>
+                    <span>{t('success.joinSuccessButton')}</span>
                   </button>
                 </div>
               </div>
@@ -1509,7 +1550,7 @@ Thank you`;
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
             <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
-              استعد لتجربة استثنائية مع فريق ترمُز المحترف - نحن هنا لتحويل أحلامك إلى واقع مذهل
+              {t('contact.experienceText')}
             </p>
           </div>
 
@@ -1530,27 +1571,27 @@ Thank you`;
                     {isLoadingContact ? (
                       <div className="flex justify-center items-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                        <span className="mr-3 text-slate-600">جاري تحميل معلومات التواصل...</span>
+                        <span className="mr-3 text-slate-600">{t('states.loadingContact')}</span>
                       </div>
                     ) : [
                       { 
                         icon: <Phone size={24} />, 
-                        label: "الهاتف", 
+                        label: t('contact.phone'), 
                         value: firebaseContactInfo.phone || "+966 50 123 4567", 
                         gradient: "from-emerald-500 to-teal-500",
                         dir: "ltr"
                       },
                       { 
                         icon: <Mail size={24} />, 
-                        label: "البريد الإلكتروني", 
+                        label: t('contact.email'), 
                         value: firebaseContactInfo.email || "info@tramuz-design.com", 
                         gradient: "from-teal-500 to-cyan-500",
                         dir: "ltr"
                       },
                       { 
                         icon: <MapPin size={24} />, 
-                        label: "العنوان", 
-                        value: firebaseContactInfo.address || "الرياض حي النرجس شارع الملك فهد مبنى التصميم الحديث - الطابق الثالث", 
+                        label: t('contact.address'), 
+                        value: language === 'en' ? (firebaseContactInfo.address_en || firebaseContactInfo.address || "Riyadh, Saudi Arabia") : (firebaseContactInfo.address || "الرياض حي النرجس شارع الملك فهد مبنى التصميم الحديث - الطابق الثالث"), 
                         gradient: "from-emerald-600 to-teal-600"
                       }
                     ].map((item, index) => (
@@ -1584,9 +1625,9 @@ Thank you`;
 
                 <form className="space-y-8">
                   {[
-                    { label: "الاسم الكامل", type: "text", placeholder: "أدخل اسمك الكامل" },
-                    { label: "البريد الإلكتروني", type: "email", placeholder: "your@email.com", dir: "ltr" },
-                    { label: "رقم الهاتف", type: "tel", placeholder: "+966 50 123 4567", dir: "ltr" }
+                    { label: t('contact.form.name'), type: "text", placeholder: t('contact.form.namePlaceholder') },
+                    { label: t('contact.form.email'), type: "email", placeholder: "your@email.com", dir: "ltr" },
+                    { label: t('contact.form.phone'), type: "tel", placeholder: "+966 50 123 4567", dir: "ltr" }
                   ].map((field, index) => (
                     <div key={index} className="group">
                       <label className="block text-sm font-bold text-gray-700 mb-3">
@@ -1603,34 +1644,34 @@ Thank you`;
                   
                   <div className="group">
                     <label className="block text-sm font-bold text-gray-700 mb-3">
-                      نوع الخدمة المطلوبة
+                      {t('contact.form.serviceType')}
                     </label>
                     <select className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg group-hover:border-emerald-300">
-                      <option>اختر نوع الخدمة</option>
-                      <option>التصميم الداخلي</option>
-                      <option>التصميم الخارجي</option>
-                      <option>التخطيط الحضري</option>
-                      <option>تصميم المناظر الطبيعية</option>
-                      <option>تطوير العلامات التجارية</option>
-                      <option>استشارات تسويقية</option>
-                      <option>استشارات تشغيلية</option>
-                      <option>استشارات تقنية</option>
-                      <option>توظيف وتدريب</option>
-                      <option>إدارة العقود</option>
-                      <option>دراسة الجدوى والتخطيط الاستراتيجي</option>
-                      <option>إدارة علاقات الشركات</option>
-                      <option>أخرى</option>
+                      <option>{t('contact.form.selectService')}</option>
+                      <option>{t('services.interiorDesign.title')}</option>
+                      <option>{t('services.exteriorDesign.title')}</option>
+                      <option>{t('services.urbanPlanning.title')}</option>
+                      <option>{t('services.landscapeDesign.title')}</option>
+                      <option>{t('services.brandDevelopment.title')}</option>
+                      <option>{t('services.marketingConsulting.title')}</option>
+                      <option>{t('contact.form.operationalConsulting')}</option>
+                      <option>{t('contact.form.technicalConsulting')}</option>
+                      <option>{t('contact.form.recruitmentTraining')}</option>
+                      <option>{t('contact.form.contractManagement')}</option>
+                      <option>{t('contact.form.feasibilityStudy')}</option>
+                      <option>{t('contact.form.corporateRelations')}</option>
+                      <option>{t('contact.form.other')}</option>
                     </select>
                   </div>
                   
                   <div className="group">
                     <label className="block text-sm font-bold text-gray-700 mb-3">
-                      تفاصيل المشروع
+                      {t('contact.form.projectDetails')}
                     </label>
                     <textarea
                       rows={4}
                       className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg resize-none group-hover:border-emerald-300"
-                      placeholder="أخبرنا عن مشروعك وكيف يمكننا مساعدتك..."
+                      placeholder={t('contact.form.projectDetailsPlaceholder')}
                     ></textarea>
                   </div>
                   
@@ -1639,7 +1680,7 @@ Thank you`;
                     className="w-full px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xl rounded-2xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
                     <Sparkles size={24} />
-                    <span>أرسل استشارتك</span>
+                    <span>{t('contact.form.send')}</span>
                     <ArrowRight size={24} />
                   </button>
                 </form>
@@ -1656,14 +1697,14 @@ Thank you`;
           <div className="text-center mb-12">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 mb-4">
               <span className="text-lg mr-2">🏆</span>
-              <span className="text-emerald-700 font-medium text-sm">قصص نجاح عملائنا</span>
+              <span className="text-emerald-700 font-medium text-sm">{t('success.stories.title')}</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 {t('success.stories.title')}
             </h2>
             <div className="w-16 h-1 bg-gradient-to-r from-emerald-600 to-teal-600 mx-auto rounded-full mb-4"></div>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              نفتخر بنجاحات عملائنا ونشارككم قصص إنجازاتهم المميزة
+              {t('success.stories.description')}
             </p>
           </div>
 
@@ -1745,15 +1786,15 @@ Thank you`;
           {/* Call to Action */}
           <div className="text-center mt-12">
             <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">كن التالي في قائمة نجاحاتنا</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">{t('success.joinSuccessTitle')}</h3>
               <p className="text-gray-600 mb-6 max-w-xl mx-auto">
-                ابدأ رحلتك نحو النجاح مع فريقنا المتميز
+                {t('success.joinSuccessDescription')}
               </p>
                   <button 
                     onClick={() => scrollToSection('contact')}
                 className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg"
                   >
-                ابدأ مشروعك الآن
+                {t('success.joinSuccessButton')}
                   </button>
             </div>
           </div>
@@ -1787,34 +1828,34 @@ Thank you`;
                   />
                   <div className="w-3 h-3 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full ml-2 shadow-lg"></div>
               </div>
-                <h3 className="text-2xl font-black mb-4 text-white">شركة ترمُز</h3>
+                <h3 className="text-2xl font-black mb-4 text-white">{t('footer.company.name')}</h3>
                 <p className="text-gray-300 leading-relaxed mb-6 text-base">
-                  شركة رائدة في قطاع التصميم والاستشارات، متخصصة في التصميم الداخلي والخارجي، التخطيط الحضري، تصميم المناظر الطبيعية، وتطوير العلامات التجارية.
+                  {t('footer.company.description')}
                 </p>
                 
                 {/* Social Media Links */}
                 <div className="flex items-center space-x-reverse space-x-4">
-                  <span className="text-gray-400 text-sm font-medium">تابعنا على:</span>
+                  <span className="text-gray-400 text-sm font-medium">{t('footer.socialMediaFollow')}</span>
                   <div className="flex items-center space-x-reverse space-x-3">
                     {firebaseContactInfo.facebook && (
                       <a href={firebaseContactInfo.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                        <span className="text-white text-sm">f</span>
-                      </a>
+                      <span className="text-white text-sm">f</span>
+                    </a>
                     )}
                     {firebaseContactInfo.twitter && (
                       <a href={firebaseContactInfo.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                        <span className="text-white text-sm">t</span>
-                      </a>
+                      <span className="text-white text-sm">t</span>
+                    </a>
                     )}
                     {firebaseContactInfo.instagram && (
                       <a href={firebaseContactInfo.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                        <span className="text-white text-sm">i</span>
-                      </a>
+                      <span className="text-white text-sm">i</span>
+                    </a>
                     )}
                     {firebaseContactInfo.linkedin && (
                       <a href={firebaseContactInfo.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                        <span className="text-white text-sm">l</span>
-                      </a>
+                      <span className="text-white text-sm">l</span>
+                    </a>
                     )}
                     {firebaseContactInfo.youtube && (
                       <a href={firebaseContactInfo.youtube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
@@ -1822,7 +1863,7 @@ Thank you`;
                       </a>
                     )}
                     {!firebaseContactInfo.facebook && !firebaseContactInfo.twitter && !firebaseContactInfo.instagram && !firebaseContactInfo.linkedin && !firebaseContactInfo.youtube && (
-                      <span className="text-gray-500 text-sm">سيتم إضافة الروابط قريباً</span>
+                      <span className="text-gray-500 text-sm">{t('footer.socialLinksComingSoon')}</span>
                     )}
                   </div>
                 </div>
@@ -1832,17 +1873,10 @@ Thank you`;
             <div>
               <h4 className="text-xl font-black mb-6 flex items-center">
                   <Sparkles className="ml-2 text-emerald-400" size={20} />
-                خدماتنا
+                {t('footer.ourServices')}
               </h4>
                 <div className="grid grid-cols-1 gap-3">
-                {[
-                  "التصميم الداخلي",
-                  "التصميم الخارجي",
-                  "التخطيط الحضري",
-                  "تصميم المناظر الطبيعية",
-                  "تطوير العلامات التجارية",
-                  "استشارات تسويقية"
-                ].map((service, index) => (
+                {t('footer.services').map((service, index) => (
                     <a 
                       key={index} 
                       href="#services" 
@@ -1859,13 +1893,13 @@ Thank you`;
             <div>
               <h4 className="text-xl font-black mb-6 flex items-center">
                   <Phone className="ml-2 text-emerald-400" size={20} />
-                تواصل معنا
+                {t('navigation.contact')}
               </h4>
                 <div className="space-y-4">
                   <div className="flex items-start space-x-reverse space-x-3">
                     <Phone size={18} className="text-emerald-400 mt-1 flex-shrink-0" />
                     <div>
-                      <p className="text-gray-300 text-sm font-medium">الهاتف</p>
+                      <p className="text-gray-300 text-sm font-medium">{t('footer.phone')}</p>
                       <a href={`tel:${firebaseContactInfo.phone || '+966550500410'}`} className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
                         {firebaseContactInfo.phone || '+966 55 050 0410'}
                       </a>
@@ -1875,7 +1909,7 @@ Thank you`;
                   <div className="flex items-start space-x-reverse space-x-3">
                     <Mail size={18} className="text-emerald-400 mt-1 flex-shrink-0" />
                     <div>
-                      <p className="text-gray-300 text-sm font-medium">البريد الإلكتروني</p>
+                      <p className="text-gray-300 text-sm font-medium">{t('footer.email')}</p>
                       <a href={`mailto:${firebaseContactInfo.email || 'info@tramuz-design.com'}`} className="text-white hover:text-emerald-400 transition-colors duration-300 text-sm" dir="ltr">
                         {firebaseContactInfo.email || 'info@tramuz-design.com'}
                       </a>
@@ -1885,9 +1919,9 @@ Thank you`;
                   <div className="flex items-start space-x-reverse space-x-3">
                     <MapPin size={18} className="text-emerald-400 mt-1 flex-shrink-0" />
                     <div>
-                      <p className="text-gray-300 text-sm font-medium">العنوان</p>
+                      <p className="text-gray-300 text-sm font-medium">{t('footer.address')}</p>
                       <p className="text-white text-sm leading-relaxed">
-                        {firebaseContactInfo.address || 'الرياض حي النرجس\nشارع الملك فهد\nمبنى التصميم الحديث - الطابق الثالث'}
+                        {language === 'en' ? (firebaseContactInfo.address_en || firebaseContactInfo.address || 'Riyadh, Saudi Arabia') : (firebaseContactInfo.address || 'الرياض حي النرجس\nشارع الملك فهد\nمبنى التصميم الحديث - الطابق الثالث')}
                       </p>
                     </div>
                   </div>
@@ -1896,9 +1930,9 @@ Thank you`;
                     <div className="flex items-start space-x-reverse space-x-3">
                       <div className="w-4 h-4 bg-green-500 rounded-full mt-1 flex-shrink-0 flex items-center justify-center">
                         <span className="text-white text-xs">💬</span>
-                      </div>
+                </div>
                       <div>
-                        <p className="text-gray-300 text-sm font-medium">الواتساب</p>
+                        <p className="text-gray-300 text-sm font-medium">{t('footer.whatsapp')}</p>
                         <a href={`https://wa.me/${firebaseContactInfo.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-white hover:text-emerald-400 transition-colors duration-300" dir="ltr">
                           {firebaseContactInfo.whatsapp}
                         </a>
@@ -2064,6 +2098,72 @@ Thank you`;
           <ChevronDown className="rotate-180 group-hover:animate-bounce" size={20} />
         </button>
       </div>
+
+      {/* Project Details Modal */}
+      {isProjectModalOpen && selectedProject && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedProject.title}</h2>
+                <p className="text-gray-600 mt-1">{selectedProject.category} • {selectedProject.year}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsProjectModalOpen(false);
+                  setSelectedProject(null);
+                }}
+                className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Project Images */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">صور المشروع</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedProject.images.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image.url}
+                        alt={`${selectedProject.title} - صورة ${index + 1}`}
+                        className="w-full h-64 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300"
+                      />
+                      {image.isPrimary && (
+                        <div className="absolute top-3 left-3 bg-emerald-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          صورة رئيسية
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Project Description */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">وصف المشروع</h3>
+                <p className="text-gray-700 leading-relaxed">{selectedProject.description}</p>
+              </div>
+
+              {/* Project Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">التصنيف</h4>
+                  <p className="text-gray-700">{selectedProject.category}</p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">السنة</h4>
+                  <p className="text-gray-700">{selectedProject.year}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

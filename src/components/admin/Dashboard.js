@@ -8,32 +8,45 @@ import "./Dashboard.css";
 const Dashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [title, setTitle] = useState("");
+  const [titleEn, setTitleEn] = useState("");
   const [description, setDescription] = useState("");
-  const [thumbnail, setThumbnail] = useState("");
-  const [category, setCategory] = useState("exterior-design");
+  const [descriptionEn, setDescriptionEn] = useState("");
+  const [images, setImages] = useState([{url: "", isPrimary: false}]);
+  const [category, setCategory] = useState("");
   const [year, setYear] = useState("");
   const [projects, setProjects] = useState([]);
+  
+  // Categories management
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [newCategoryEn, setNewCategoryEn] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
   // Services management
   const [services, setServices] = useState([]);
   const [serviceTitle, setServiceTitle] = useState("");
+  const [serviceTitleEn, setServiceTitleEn] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
+  const [serviceDescriptionEn, setServiceDescriptionEn] = useState("");
   const [serviceIcon, setServiceIcon] = useState("");
   const [servicePrice, setServicePrice] = useState("");
   
   // Team management
   const [team, setTeam] = useState([]);
   const [memberName, setMemberName] = useState("");
+  const [memberNameEn, setMemberNameEn] = useState("");
   const [memberPosition, setMemberPosition] = useState("");
+  const [memberPositionEn, setMemberPositionEn] = useState("");
   const [memberImage, setMemberImage] = useState("");
   const [memberBio, setMemberBio] = useState("");
+  const [memberBioEn, setMemberBioEn] = useState("");
   
   // Contact management
   const [contactInfo, setContactInfo] = useState({
     phone: "",
     email: "",
     address: "",
+    address_en: "",
     whatsapp: "",
     instagram: "",
     twitter: "",
@@ -48,6 +61,88 @@ const Dashboard = () => {
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isAddingService, setIsAddingService] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
+
+  // تحميل التصنيفات من Firebase
+  const fetchCategories = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "categories"));
+      const categoriesList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCategories(categoriesList);
+    } catch (error) {
+      console.error("خطأ في تحميل التصنيفات: ", error);
+    }
+  };
+
+  // إضافة تصنيف جديد
+  const addCategory = async () => {
+    if (!newCategory || !newCategoryEn) {
+      alert("يرجى ملء جميع الحقول المطلوبة");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "categories"), {
+        name: newCategory,
+        name_en: newCategoryEn,
+        createdAt: new Date().toISOString()
+      });
+      alert("تمت إضافة التصنيف بنجاح!");
+      setNewCategory("");
+      setNewCategoryEn("");
+      fetchCategories();
+    } catch (error) {
+      console.error("خطأ في إضافة التصنيف: ", error);
+      alert("حدث خطأ في إضافة التصنيف");
+    }
+  };
+
+  // حذف تصنيف
+  const deleteCategory = async (categoryId) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا التصنيف؟")) {
+      try {
+        await deleteDoc(doc(db, "categories", categoryId));
+        alert("تم حذف التصنيف بنجاح!");
+        fetchCategories();
+      } catch (error) {
+        console.error("خطأ في حذف التصنيف: ", error);
+        alert("حدث خطأ في حذف التصنيف");
+      }
+    }
+  };
+
+  // إضافة صورة جديدة
+  const addImage = () => {
+    setImages([...images, {url: "", isPrimary: false}]);
+  };
+
+  // حذف صورة
+  const removeImage = (index) => {
+    const newImages = images.filter((_, i) => i !== index);
+    // إذا كانت الصورة المحذوفة هي الرئيسية، اجعل الصورة الأولى رئيسية
+    if (images[index].isPrimary && newImages.length > 0) {
+      newImages[0].isPrimary = true;
+    }
+    setImages(newImages);
+  };
+
+  // تحديد الصورة الرئيسية
+  const setPrimaryImage = (index) => {
+    const newImages = images.map((img, i) => ({
+      ...img,
+      isPrimary: i === index
+    }));
+    setImages(newImages);
+  };
+
+  // تحديث رابط الصورة
+  const updateImageUrl = (index, url) => {
+    const newImages = [...images];
+    newImages[index].url = url;
+    setImages(newImages);
+  };
 
   // تحميل المشاريع من Firebase
   const fetchProjects = async () => {
@@ -115,16 +210,22 @@ const Dashboard = () => {
     try {
       await addDoc(collection(db, "team"), {
         name: memberName,
+        name_en: memberNameEn || memberName,
         position: memberPosition,
+        position_en: memberPositionEn || memberPosition,
         image: memberImage,
         bio: memberBio,
+        bio_en: memberBioEn || memberBio,
         createdAt: new Date().toISOString()
       });
       
       setMemberName("");
+      setMemberNameEn("");
       setMemberPosition("");
+      setMemberPositionEn("");
       setMemberImage("");
       setMemberBio("");
+      setMemberBioEn("");
       setIsAddingMember(false);
       fetchTeam();
     } catch (error) {
@@ -181,6 +282,11 @@ const Dashboard = () => {
         
         if (hoursDiff < 24) {
           setIsLoggedIn(true);
+          fetchProjects();
+          fetchServices();
+          fetchTeam();
+          fetchContactInfo();
+          fetchCategories();
         } else {
           // انتهت صلاحية الجلسة
           localStorage.removeItem('isLoggedIn');
@@ -213,17 +319,27 @@ const Dashboard = () => {
   };
 
   const addProject = async () => {
-    if (!title || !description || !category || !year) {
-      alert("يرجى ملء جميع الحقول المطلوبة");
+    if (!title || !description || !category || !year || images.length === 0 || !images[0].url) {
+      alert("يرجى ملء جميع الحقول المطلوبة وتأكد من إضافة صورة واحدة على الأقل");
       return;
+    }
+
+    // التأكد من وجود صورة رئيسية
+    const hasPrimary = images.some(img => img.isPrimary);
+    if (!hasPrimary) {
+      const newImages = [...images];
+      newImages[0].isPrimary = true;
+      setImages(newImages);
     }
 
     try {
       setIsLoading(true);
       await addDoc(collection(db, "projects"), {
         title,
+        title_en: titleEn || title,
         description,
-        thumbnail: thumbnail || "🏗️", // قيمة افتراضية إذا لم يتم إدخال صورة
+        description_en: descriptionEn || description,
+        images: images.filter(img => img.url), // حفظ الصور فقط التي لها روابط
         category,
         year,
         createdAt: new Date().toISOString()
@@ -232,9 +348,11 @@ const Dashboard = () => {
       
       // إعادة تعيين النموذج
       setTitle("");
+      setTitleEn("");
       setDescription("");
-      setThumbnail("");
-      setCategory("exterior-design");
+      setDescriptionEn("");
+      setImages([{url: "", isPrimary: false}]);
+      setCategory("");
       setYear("");
       
       // إعادة تحميل المشاريع
@@ -271,7 +389,9 @@ const Dashboard = () => {
       setIsLoading(true);
       await addDoc(collection(db, "services"), {
         title: serviceTitle,
+        title_en: serviceTitleEn || serviceTitle,
         description: serviceDescription,
+        description_en: serviceDescriptionEn || serviceDescription,
         icon: serviceIcon,
         price: servicePrice || 0,
         createdAt: new Date().toISOString()
@@ -280,7 +400,9 @@ const Dashboard = () => {
       
       // إعادة تعيين النموذج
       setServiceTitle("");
+      setServiceTitleEn("");
       setServiceDescription("");
+      setServiceDescriptionEn("");
       setServiceIcon("");
       setServicePrice("");
       setIsAddingService(false);
@@ -334,7 +456,7 @@ const Dashboard = () => {
               <Settings size={32} />
             </div>
             <div className="header-text">
-              <h1 className="dashboard-title">لوحة تحكم الإدارة</h1>
+      <h1 className="dashboard-title">لوحة تحكم الإدارة</h1>
               <p className="dashboard-subtitle">إدارة المشاريع والخدمات</p>
             </div>
           </div>
@@ -377,6 +499,13 @@ const Dashboard = () => {
             <span>التواصل</span>
           </button>
           <button
+            className={`tab-button ${activeTab === 'categories' ? 'active' : ''}`}
+            onClick={() => setActiveTab('categories')}
+          >
+            <Settings size={20} />
+            <span>التصنيفات</span>
+          </button>
+          <button
             className={`tab-button ${activeTab === 'stats' ? 'active' : ''}`}
             onClick={() => setActiveTab('stats')}
           >
@@ -412,19 +541,28 @@ const Dashboard = () => {
         <input
           type="text"
           className="input-field"
-          placeholder="عنوان المشروع"
+          placeholder="عنوان المشروع (AR)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+        />
+        <input
+          type="text"
+          className="input-field"
+          placeholder="Project Title (EN)"
+          value={titleEn}
+          onChange={(e) => setTitleEn(e.target.value)}
         />
         <select
           className="input-field"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="exterior-design">🏢 تصميم خارجي</option>
-          <option value="interior-design">🏠 تصميم داخلي</option>
-          <option value="execution-plans">📐 مخططات تنفيذية</option>
-          <option value="branding">🎨 هوية بصرية</option>
+          <option value="">اختر التصنيف</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
         </select>
         <input
           type="text"
@@ -433,19 +571,59 @@ const Dashboard = () => {
           value={year}
           onChange={(e) => setYear(e.target.value)}
         />
-                    <input
-                      type="text"
-                      className="input-field full-width"
-                      placeholder="صورة مصغرة (رمز تعبيري أو رابط)"
-                      value={thumbnail}
-                      onChange={(e) => setThumbnail(e.target.value)}
-                    />
+                    {/* إدارة الصور */}
+                    <div className="input-field full-width">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">صور المشروع</label>
+                      {images.map((image, index) => (
+                        <div key={index} className="flex items-center gap-2 mb-2">
+                          <input
+                            type="url"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                            placeholder="رابط الصورة"
+                            value={image.url}
+                            onChange={(e) => updateImageUrl(index, e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPrimaryImage(index)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                              image.isPrimary 
+                                ? 'bg-emerald-600 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            رئيسية
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addImage}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+                      >
+                        + إضافة صورة
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     className="textarea-field"
-                    placeholder="وصف المشروع"
+                    placeholder="وصف المشروع (AR)"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    rows="3"
+                  />
+                  <textarea
+                    className="textarea-field"
+                    placeholder="Project Description (EN)"
+                    value={descriptionEn}
+                    onChange={(e) => setDescriptionEn(e.target.value)}
                     rows="3"
                   />
                   <div className="form-actions">
@@ -458,19 +636,21 @@ const Dashboard = () => {
                       {isLoading ? "جاري الإضافة..." : "إضافة مشروع"}
                     </button>
                     <button 
-                      className="submit-button secondary" 
-                      onClick={() => {
-                        setIsAddingProject(false);
-                        setTitle("");
-                        setDescription("");
-                        setThumbnail("");
-                        setCategory("exterior-design");
-                        setYear("");
-                      }}
-                    >
-                      <X size={20} />
-                      إلغاء
-                    </button>
+  className="submit-button secondary" 
+  onClick={() => {
+    setIsAddingProject(false);
+    setTitle("");
+    setTitleEn("");
+    setDescription("");
+    setDescriptionEn("");
+    setImages([{url: "", isPrimary: false}]);
+    setCategory("");
+    setYear("");
+  }}
+>
+  <X size={20} />
+  إلغاء
+</button>
                   </div>
                 </div>
               )}
@@ -566,9 +746,16 @@ const Dashboard = () => {
                     <input
                       type="text"
                       className="input-field"
-                      placeholder="عنوان الخدمة"
+                      placeholder="عنوان الخدمة (AR)"
                       value={serviceTitle}
                       onChange={(e) => setServiceTitle(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Service Title (EN)"
+                      value={serviceTitleEn}
+                      onChange={(e) => setServiceTitleEn(e.target.value)}
                     />
                     <input
                       type="text"
@@ -587,9 +774,16 @@ const Dashboard = () => {
                   </div>
                   <textarea
                     className="textarea-field"
-                    placeholder="وصف الخدمة"
+                    placeholder="وصف الخدمة (AR)"
                     value={serviceDescription}
                     onChange={(e) => setServiceDescription(e.target.value)}
+                    rows="3"
+                  />
+                  <textarea
+                    className="textarea-field"
+                    placeholder="Service Description (EN)"
+                    value={serviceDescriptionEn}
+                    onChange={(e) => setServiceDescriptionEn(e.target.value)}
                     rows="3"
                   />
                   <div className="form-actions">
@@ -694,7 +888,7 @@ const Dashboard = () => {
                 <form onSubmit={addMember} className="form-container">
                   <div className="form-grid">
                     <div className="input-field">
-                      <label>اسم العضو *</label>
+                      <label>اسم العضو (AR) *</label>
                       <input
                         type="text"
                         value={memberName}
@@ -705,13 +899,33 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="input-field">
-                      <label>المنصب *</label>
+                      <label>Member Name (EN)</label>
+                      <input
+                        type="text"
+                        value={memberNameEn}
+                        onChange={(e) => setMemberNameEn(e.target.value)}
+                        placeholder="Example: Ahmed Mohamed"
+                      />
+                    </div>
+                    
+                    <div className="input-field">
+                      <label>المنصب (AR) *</label>
                       <input
                         type="text"
                         value={memberPosition}
                         onChange={(e) => setMemberPosition(e.target.value)}
                         placeholder="مثال: مصمم داخلي"
                         required
+                      />
+                    </div>
+                    
+                    <div className="input-field">
+                      <label>Position (EN)</label>
+                      <input
+                        type="text"
+                        value={memberPositionEn}
+                        onChange={(e) => setMemberPositionEn(e.target.value)}
+                        placeholder="Example: Interior Designer"
                       />
                     </div>
                     
@@ -726,11 +940,21 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="input-field full-width">
-                      <label>نبذة عن العضو</label>
+                      <label>نبذة عن العضو (AR)</label>
                       <textarea
                         value={memberBio}
                         onChange={(e) => setMemberBio(e.target.value)}
                         placeholder="نبذة مختصرة عن العضو وخبراته..."
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="input-field full-width">
+                      <label>Member Bio (EN)</label>
+                      <textarea
+                        value={memberBioEn}
+                        onChange={(e) => setMemberBioEn(e.target.value)}
+                        placeholder="Brief description about the member and their experience..."
                         rows={3}
                       />
                     </div>
@@ -854,12 +1078,22 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="input-field full-width">
-                      <label>العنوان</label>
+                      <label>العنوان (AR)</label>
                       <input
                         type="text"
                         value={contactInfo.address}
                         onChange={(e) => setContactInfo({...contactInfo, address: e.target.value})}
                         placeholder="الرياض، المملكة العربية السعودية"
+                      />
+                    </div>
+                    
+                    <div className="input-field full-width">
+                      <label>Address (EN)</label>
+                      <input
+                        type="text"
+                        value={contactInfo.address_en}
+                        onChange={(e) => setContactInfo({...contactInfo, address_en: e.target.value})}
+                        placeholder="Riyadh, Saudi Arabia"
                       />
                     </div>
                     
@@ -1009,6 +1243,87 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Categories Tab */}
+        {activeTab === 'categories' && (
+          <div className="tab-content">
+            {/* Add Category Section */}
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Plus size={24} />
+                  <span>إضافة تصنيف جديد</span>
+                </div>
+              </div>
+              
+              <div className="form-container">
+                <div className="form-grid">
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="اسم التصنيف (AR)"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Category Name (EN)"
+                    value={newCategoryEn}
+                    onChange={(e) => setNewCategoryEn(e.target.value)}
+                  />
+                </div>
+                <div className="form-actions">
+                  <button 
+                    className="submit-button primary" 
+                    onClick={addCategory}
+                    disabled={isLoading}
+                  >
+                    <Save size={20} />
+                    {isLoading ? "جاري الإضافة..." : "إضافة تصنيف"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Categories List */}
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Settings size={24} />
+                  <span>التصنيفات الحالية</span>
+                </div>
+              </div>
+              
+              {categories.length === 0 ? (
+                <div className="empty-state">
+                  <Settings size={48} />
+                  <h3>لا توجد تصنيفات حالياً</h3>
+                  <p>ابدأ بإضافة تصنيف جديد</p>
+                </div>
+              ) : (
+                <div className="projects-grid">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className="project-card">
+                      <div className="project-info">
+                        <h3 className="project-title">{cat.name}</h3>
+                        <p className="project-description">{cat.name_en}</p>
+                      </div>
+                      <div className="project-actions">
+                        <button 
+                          className="action-button delete"
+                          onClick={() => deleteCategory(cat.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

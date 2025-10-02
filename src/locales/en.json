@@ -406,6 +406,9 @@
     }
   },
   "clients": {
+    "joinClientsTitle": "Join Our Clients",
+    "joinClientsDescription": "Be part of our success story and let us help you achieve your goals",
+    "joinClientsButton": "Start Your Project With Us",
     "title": "Our Clients",
     "subtitle": "Success Partners",
     "badge": "Success Partners",
@@ -450,9 +453,12 @@
     "subtitle": "Inspiring Success Stories",
     "badge": "Our Clients' Opinions",
     "stories": {
-      "title": "Success Stories",
+      "title": "Our Clients' Success Stories",
       "description": "We are proud of our clients' successes and share with you their distinguished achievement stories"
     },
+    "joinSuccessTitle": "Be the Next in Our Success List",
+    "joinSuccessDescription": "Start your journey towards success with our distinguished team",
+    "joinSuccessButton": "Start Your Project Now",
     "shareOpinion": {
       "title": "Share Your Opinion",
       "description": "We value our clients' opinions and continuously work to improve our services"
@@ -519,14 +525,33 @@
     "form": {
       "title": "Send Us a Message",
       "subtitle": "We will contact you within 24 hours",
-      "name": "Name",
+      "name": "Full Name",
+      "namePlaceholder": "Enter your full name",
       "email": "Email",
       "phone": "Phone Number",
       "message": "Message",
-      "send": "Send Message"
-    }
+      "send": "Send Your Consultation",
+      "serviceType": "Required Service Type",
+      "selectService": "Select Service Type",
+      "operationalConsulting": "Operational Consulting",
+      "technicalConsulting": "Technical Consulting",
+      "recruitmentTraining": "Recruitment and Training",
+      "contractManagement": "Contract Management",
+      "feasibilityStudy": "Feasibility Study and Strategic Planning",
+      "corporateRelations": "Corporate Relations Management",
+      "other": "Other",
+      "projectDetails": "Project Details",
+      "projectDetailsPlaceholder": "Tell us about your project and how we can help you..."
+    },
+    "experienceText": "Get ready for an exceptional experience with the professional Tramuz team - we're here to transform your dreams into amazing reality",
+    "whatsappMessageHeader": "Hello, I would like to request the following services from Tramuz company:",
+    "whatsappThanks": "Thank you"
   },
   "footer": {
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "whatsapp": "WhatsApp",
     "companyDescription": "Tramuz Design & Consulting Company - We provide innovative and distinguished solutions for restaurants, cafes, and commercial projects",
     "quickLinks": "Quick Links",
     "ourServices": "Our Services",
@@ -557,7 +582,9 @@
       "ourServices": "Our Services",
       "followUs": "Follow Us"
     },
-    "copyright": "All Rights Reserved © 2024 Tramuz Design & Consulting Company"
+    "copyright": "All Rights Reserved © 2024 Tramuz Design & Consulting Company",
+    "socialMediaFollow": "Follow us on:",
+    "socialLinksComingSoon": "Links will be added soon"
   },
   "cart": {
     "title": "Cart",
@@ -571,5 +598,11 @@
   "language": {
     "arabic": "العربية",
     "english": "English"
+  }
+  ,
+  "cta": {
+    "contactUs": "Contact Us",
+    "viewWorks": "View Works",
+    "discoverMore": "Discover More"
   }
 }

@@ -363,6 +363,9 @@
     }
   },
   "clients": {
+    "joinClientsTitle": "انضم إلى عملائنا",
+    "joinClientsDescription": "كن جزءاً من قصة نجاحنا واسمح لنا بمساعدتك في تحقيق أهدافك",
+    "joinClientsButton": "ابدأ مشروعك معنا",
     "title": "عملاؤنا",
     "subtitle": "شركاء النجاح",
     "badge": "شركاء النجاح",
@@ -446,9 +449,12 @@
     "subtitle": "قصص نجاح ملهمة",
     "badge": "آراء عملائنا",
     "stories": {
-      "title": "قصص النجاح",
+      "title": "قصص نجاح عملائنا",
       "description": "نفتخر بنجاحات عملائنا ونشارككم قصص إنجازاتهم المميزة"
     },
+    "joinSuccessTitle": "كن التالي في قائمة نجاحاتنا",
+    "joinSuccessDescription": "ابدأ رحلتك نحو النجاح مع فريقنا المتميز",
+    "joinSuccessButton": "ابدأ مشروعك الآن",
     "shareOpinion": {
       "title": "شاركنا رأيك",
       "description": "نحن نقدر آراء عملائنا ونعمل باستمرار على تحسين خدماتنا"
@@ -515,14 +521,33 @@
     "form": {
       "title": "أرسل لنا رسالة",
       "subtitle": "سنتواصل معك خلال 24 ساعة",
-      "name": "الاسم",
+      "name": "الاسم الكامل",
+      "namePlaceholder": "أدخل اسمك الكامل",
       "email": "البريد الإلكتروني",
       "phone": "رقم الهاتف",
       "message": "الرسالة",
-      "send": "إرسال الرسالة"
-    }
+      "send": "أرسل استشارتك",
+      "serviceType": "نوع الخدمة المطلوبة",
+      "selectService": "اختر نوع الخدمة",
+      "operationalConsulting": "استشارات تشغيلية",
+      "technicalConsulting": "استشارات تقنية",
+      "recruitmentTraining": "توظيف وتدريب",
+      "contractManagement": "إدارة العقود",
+      "feasibilityStudy": "دراسة الجدوى والتخطيط الاستراتيجي",
+      "corporateRelations": "إدارة علاقات الشركات",
+      "other": "أخرى",
+      "projectDetails": "تفاصيل المشروع",
+      "projectDetailsPlaceholder": "أخبرنا عن مشروعك وكيف يمكننا مساعدتك..."
+    },
+    "experienceText": "استعد لتجربة استثنائية مع فريق ترمُز المحترف - نحن هنا لتحويل أحلامك إلى واقع مذهل",
+    "whatsappMessageHeader": "مرحباً، أريد طلب الخدمات التالية من شركة ترمُز:",
+    "whatsappThanks": "شكراً لكم"
   },
   "footer": {
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "address": "العنوان",
+    "whatsapp": "الواتساب",
     "company": {
       "name": "ترمُز",
       "description": "شركة ترمُز للتصميم والاستشارات - نقدم حلولاً مبتكرة ومتميزة للمطاعم والمقاهي والمشاريع التجارية في المملكة العربية السعودية",
@@ -553,7 +578,9 @@
       "ourServices": "خدماتنا",
       "followUs": "تابعنا"
     },
-    "copyright": "جميع الحقوق محفوظة © 2024 شركة ترمُز للتصميم والاستشارات"
+    "copyright": "جميع الحقوق محفوظة © 2024 شركة ترمُز للتصميم والاستشارات",
+    "socialMediaFollow": "تابعنا على:",
+    "socialLinksComingSoon": "سيتم إضافة الروابط قريباً"
   },
   "cart": {
     "title": "السلة",
@@ -567,6 +594,22 @@
   "language": {
     "arabic": "العربية",
     "english": "English"
+  }
+  ,
+  "cta": {
+    "contactUs": "اتصل بنا",
+    "viewWorks": "عرض الأعمال",
+    "discoverMore": "اكتشف المزيد"
+  }
+  ,
+  "states": {
+    "loadingProjects": "جاري تحميل المشاريع...",
+    "noProjects": "لا توجد مشاريع حالياً",
+    "addProjectsFromDashboard": "قم بإضافة مشاريع جديدة من لوحة التحكم",
+    "loadingTeam": "جاري تحميل فريق العمل...",
+    "noTeam": "لا يوجد أعضاء في الفريق",
+    "teamComingSoon": "سيتم إضافة فريق العمل قريباً",
+    "loadingContact": "جاري تحميل معلومات التواصل..."
   }
   
 }
