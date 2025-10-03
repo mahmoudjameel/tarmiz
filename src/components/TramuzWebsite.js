@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Play, Users, Award, Sparkles, Phone, Mail, MapPin, X, ArrowRight, ArrowLeft, Globe, Zap, Target, Heart, Star, ShoppingCart, Plus, Minus, Trash2, Languages } from 'lucide-react';
+import { ChevronDown, Play, Users, Award, Sparkles, Phone, Mail, MapPin, X, ArrowRight, ArrowLeft, Globe, Zap, Target, Heart, Star, ShoppingCart, Plus, Minus, Trash2, Languages, Settings } from 'lucide-react';
 import arTranslations from '../locales/ar.json';
 import enTranslations from '../locales/en.json';
 import heroImg1 from '../images/hero/hero-1.jpg';
 import heroImg2 from '../images/hero/hero-2.jpg';
 import heroImg3 from '../images/hero/hero-3.jpg';
 import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 
 const TramuzWebsite = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -44,6 +44,12 @@ const TramuzWebsite = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isFullscreenImage, setIsFullscreenImage] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [heroData, setHeroData] = useState(null);
+  const [heroLoading, setHeroLoading] = useState(true);
 
   // Translation function
   const t = (key) => {
@@ -139,6 +145,23 @@ const TramuzWebsite = () => {
       console.error("خطأ في تحميل التصنيفات من Firebase: ", error);
     } finally {
       setIsLoadingCategories(false);
+    }
+  };
+
+  // تحميل العملاء من Firebase
+  const fetchClientsFromFirebase = async () => {
+    setIsLoadingClients(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "clients"));
+      const clientsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setClients(clientsList);
+    } catch (error) {
+      console.error("خطأ في تحميل العملاء: ", error);
+    } finally {
+      setIsLoadingClients(false);
     }
   };
 
@@ -241,11 +264,45 @@ const TramuzWebsite = () => {
     fetchTeamFromFirebase();
     fetchContactInfoFromFirebase();
     fetchCategoriesFromFirebase();
+    fetchClientsFromFirebase();
   }, []);
+
+  // تحميل بيانات البانر من Firestore
+  useEffect(() => {
+    const fetchHero = async () => {
+      setHeroLoading(true);
+      try {
+        const docRef = doc(db, 'settings', 'hero');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setHeroData(docSnap.data());
+          console.log('heroData:', docSnap.data());
+        } else {
+          setHeroData(null);
+          console.log('heroData: null');
+        }
+      } catch (e) {
+        setHeroData(null);
+        console.log('heroData: error', e);
+      } finally {
+        setHeroLoading(false);
+      }
+    };
+    fetchHero();
+  }, []);
+
+  // منطق السلايدر
+  useEffect(() => {
+    if (!heroData || !heroData.images || heroData.images.length === 0) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroData.images.length);
+    }, (heroData?.timer || 5) * 1000);
+    return () => clearInterval(timer);
+  }, [heroData]);
 
   // تم حذف useEffect للمودال
 
- 
+
   const heroSlides = [
     {
       title: t('hero.title'),
@@ -515,18 +572,17 @@ ${t('contact.whatsappThanks')}`;
       </nav>
 
       {/* Hero Section */}
+      {heroLoading ? (
+        <div className="h-96 flex items-center justify-center text-xl">جاري تحميل البانر...</div>
+      ) : heroData && heroData.images && heroData.images.length > 0 ? (
       <section id="home" className="relative min-h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 transition-all duration-1000">
-          <img
-            src={heroSlides[currentSlide].image}
-            alt="Hero Background"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'block';
-            }}
-          />
-          <div className="hidden w-full h-full bg-gradient-to-br from-emerald-900 via-teal-800 to-gray-800"></div>
+          <div className="absolute inset-0 transition-all duration-1000">
+            <img
+              src={heroData.images[currentSlide]}
+              alt="Hero Background"
+              className="w-full h-full object-cover"
+              onError={e => { e.target.style.display = 'none'; }}
+            />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/50"></div>
         </div>
         
@@ -534,41 +590,33 @@ ${t('contact.whatsappThanks')}`;
           <div className="max-w-5xl">
             {/* Title */}
             <div className="mb-8">
-              <div className={`inline-block px-6 py-3 rounded-full bg-gradient-to-r ${heroSlides[currentSlide].accent} text-slate-800 font-bold text-sm mb-6`}>
-                ✨ {t('hero.badge')}
+                <div className={`inline-block px-6 py-3 rounded-full bg-gradient-to-r ${heroSlides[currentSlide].accent} text-slate-800 font-bold text-sm mb-6`}>
+                  ✨ {t('hero.badge')}
               </div>
               <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
                 <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
-                  {heroSlides[currentSlide].title}
+                    {heroData[language]?.title || ''}
                 </span>
               </h1>
             </div>
             
-            <h2 className="text-3xl md:text-5xl mb-8 text-slate-200 leading-relaxed font-bold">
-              {heroSlides[currentSlide].subtitle}
-            </h2>
-            
-            <p className="text-xl md:text-2xl mb-12 text-slate-300 leading-relaxed font-medium max-w-4xl">
-              {heroSlides[currentSlide].description}
+              <h2 className="text-3xl md:text-5xl mb-8 text-slate-200 leading-relaxed font-bold">
+                {heroData[language]?.subtitle || ''}
+              </h2>
+              
+              <p className="text-xl md:text-2xl mb-12 text-slate-300 leading-relaxed font-medium max-w-4xl">
+                {heroData[language]?.description || ''}
             </p>
             
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-6 mb-12">
-              <button 
-                onClick={() => scrollToSection('contact')}
-                className="group px-10 py-5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-lg rounded-2xl hover:shadow-xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
+                {heroData[language]?.buttons?.map((btn, i) => btn.label && btn.link && (
+                  <a key={i} href={btn.link} className="group px-10 py-5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-lg rounded-2xl hover:shadow-xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
               >
-                <Phone className="transition-transform duration-300" size={24} />
-                <span>{t('cta.contactUs')}</span>
+                    <span>{btn.label}</span>
                 <ArrowLeft className="group-hover:-translate-x-1 transition-transform duration-150" size={20} />
-              </button>
-              <button 
-                onClick={() => scrollToSection('works')}
-                className="px-10 py-5 bg-slate-200/20 backdrop-blur-sm text-white font-bold text-lg rounded-2xl border-2 border-slate-300/40 hover:bg-slate-200/30 hover:border-slate-300/60 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
-              >
-                <Play size={20} />
-                <span>{t('cta.viewWorks')}</span>
-              </button>
+                  </a>
+                ))}
             </div>
 
           </div>
@@ -593,10 +641,43 @@ ${t('contact.whatsappThanks')}`;
 
         {/* Scroll Indicator */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-          <div className="text-white/80 text-sm mb-2">{t('cta.discoverMore')}</div>
+            <div className="text-white/80 text-sm mb-2">{t('cta.discoverMore')}</div>
           <ChevronDown className="text-white mx-auto" size={32} />
         </div>
       </section>
+      ) : heroData && (!heroData.images || heroData.images.length === 0) ? (
+        // لا توجد صور للبانر - عرض رسالة واضحة
+        <section className="h-96 flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🖼️</div>
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">لا توجد صور للبانر</h2>
+            <p className="text-gray-500 mb-4">يرجى إضافة صور للبانر من لوحة التحكم</p>
+            <a 
+              href="/admin" 
+              className="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              <Settings size={20} className="ml-2" />
+              الذهاب للوحة التحكم
+            </a>
+          </div>
+        </section>
+      ) : (
+        // fallback أو لا توجد بيانات
+        <section className="h-96 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚙️</div>
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">لا توجد بيانات للبانر</h2>
+            <p className="text-gray-500 mb-4">يرجى إعداد البانر من لوحة التحكم</p>
+            <a 
+              href="/admin" 
+              className="inline-flex items-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <Settings size={20} className="ml-2" />
+              الذهاب للوحة التحكم
+            </a>
+          </div>
+        </section>
+      )}
 
       {/* About Section */}
       <section id="about" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
@@ -802,7 +883,7 @@ ${t('contact.whatsappThanks')}`;
 
                   {/* CTA Buttons */}
                   <div className="flex flex-col gap-3">
-                    <button 
+                  <button 
                       onClick={() => addToCart(service)}
                       className="flex items-center justify-center bg-gradient-to-r from-slate-600 to-slate-700 text-white font-bold py-3 px-6 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:from-slate-700 hover:to-slate-800 shadow-lg hover:shadow-xl"
                     >
@@ -884,7 +965,7 @@ ${t('contact.whatsappThanks')}`;
                 <span>{tab.label}</span>
               </button>
             ))}
-          </div>
+            </div>
 
           {/* Gallery Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
@@ -906,6 +987,7 @@ ${t('contact.whatsappThanks')}`;
                 className="group bg-white/90 backdrop-blur-lg rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-emerald-100/50 hover:border-emerald-300/50 transform hover:-translate-y-2 hover:scale-105 cursor-pointer"
                 onClick={() => {
                   setSelectedProject(project);
+                  setCurrentImageIndex(0);
                   setIsProjectModalOpen(true);
                 }}
               >
@@ -1014,10 +1096,79 @@ ${t('contact.whatsappThanks')}`;
             <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
               {t('clients.subtitle')}
             </p>
+          </div>
+
+          {/* Dynamic Clients from Firebase */}
+          {isLoadingClients ? (
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+              <p className="mt-4 text-gray-600">جاري تحميل العملاء...</p>
+            </div>
+          ) : clients.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
+              {clients.map((client) => (
+                <div
+                  key={client.id}
+                  className="group bg-white/80 backdrop-blur-lg rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100/50 hover:border-emerald-200/50 transform hover:-translate-y-2"
+                >
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden shadow-md bg-gray-100">
+                      {client.logo ? (
+                        <img
+                          src={client.logo}
+                          alt={client.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className="w-full h-full flex items-center justify-center text-gray-400"
+                        style={{ display: client.logo ? 'none' : 'flex' }}
+                      >
+                        <Users size={32} />
+                      </div>
+                    </div>
+                    
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      {language === 'ar' ? client.name : (client.name_en || client.name)}
+                    </h3>
+                    
+                    {client.description && (
+                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                        {language === 'ar' ? client.description : (client.description_en || client.description)}
+                      </p>
+                    )}
+                    
+                    {client.website && (
+                      <a
+                        href={client.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-emerald-600 hover:text-emerald-700 text-sm font-medium transition-colors"
+                      >
+                        <Globe size={16} className="ml-1" />
+                        زيارة الموقع
+                      </a>
+                    )}
+                  </div>
                 </div>
-                
-          {/* Client Categories */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Users size={32} className="text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-700 mb-4">لا يوجد عملاء حالياً</h3>
+              <p className="text-gray-500">سيتم إضافة العملاء قريباً</p>
+            </div>
+          )}
+
+          {/* Static Client Categories - Fallback */}
+          <div className="hidden grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {[
               {
                 category: "القطاع العقاري",
@@ -1100,8 +1251,8 @@ ${t('contact.whatsappThanks')}`;
                     <h3 className="text-2xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors duration-300">
                       {category.category}
                     </h3>
-                  </div>
-                  
+                    </div>
+                    
                   <div className="space-y-4">
                     {category.clients.map((client, clientIndex) => (
                       <div
@@ -1120,8 +1271,8 @@ ${t('contact.whatsappThanks')}`;
                           />
                           <div className={`w-full h-full bg-gradient-to-r ${category.gradient} flex items-center justify-center text-white font-bold text-lg hidden`}>
                             {client.name.charAt(0)}
-                          </div>
-                        </div>
+                    </div>
+                  </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-bold text-gray-700 group-hover:text-gray-800 transition-colors duration-300 truncate">
                             {client.name}
@@ -1139,7 +1290,7 @@ ${t('contact.whatsappThanks')}`;
             ))}
           </div>
 
-
+              
           {/* Call to Action */}
           <div className="text-center">
             <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 backdrop-blur-xl rounded-3xl p-12 max-w-4xl mx-auto border border-emerald-200/50 relative overflow-hidden">
@@ -1955,15 +2106,15 @@ ${t('contact.whatsappThanks')}`;
               </div>
               
               <div className="flex items-center space-x-reverse space-x-6 text-sm">
-                <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors duration-300">
+                <button className="text-gray-400 hover:text-emerald-400 transition-colors duration-300">
                   سياسة الخصوصية
-                </a>
-                <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors duration-300">
+                </button>
+                <button className="text-gray-400 hover:text-emerald-400 transition-colors duration-300">
                   شروط الاستخدام
-                </a>
-                <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors duration-300">
+                </button>
+                <button className="text-gray-400 hover:text-emerald-400 transition-colors duration-300">
                   خريطة الموقع
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -2000,7 +2151,7 @@ ${t('contact.whatsappThanks')}`;
                 </button>
               </div>
             </div>
-
+            
             {/* Cart Items */}
             <div className="p-6">
               {cart.length === 0 ? (
@@ -2008,7 +2159,7 @@ ${t('contact.whatsappThanks')}`;
                   <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500 text-lg">{t('cart.empty')}</p>
                   <p className="text-gray-400 text-sm mt-2">{t('cart.addServices')}</p>
-                </div>
+                  </div>
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => (
@@ -2018,15 +2169,15 @@ ${t('contact.whatsappThanks')}`;
                           <h3 className="font-black text-gray-900 mb-1">{item.title}</h3>
                           <p className="text-sm text-gray-600 mb-2">{item.description}</p>
                           <p className="text-lg font-black text-slate-700">{item.price} ريال</p>
-                        </div>
+              </div>
                         <button
                           onClick={() => removeFromCart(item.id)}
                           className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50"
                         >
                           <Trash2 size={18} />
                         </button>
-                      </div>
-                      
+              </div>
+              
                       {/* Quantity Controls */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-reverse space-x-3">
@@ -2043,26 +2194,26 @@ ${t('contact.whatsappThanks')}`;
                           >
                             <Plus size={16} />
                           </button>
-                        </div>
+                  </div>
                         <div className="text-right">
                           <p className="text-sm text-gray-500">{t('cart.total')}</p>
                           <p className="font-black text-slate-700">{item.price * item.quantity} ريال</p>
-                        </div>
+                      </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-
+              </div>
+              
             {/* Footer */}
             {cart.length > 0 && (
               <div className="sticky bottom-0 bg-gradient-to-r from-slate-50 to-gray-50 border-t border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-lg font-black text-gray-900">{t('cart.total')}:</span>
                   <span className="text-2xl font-black text-slate-700">{getCartTotal()} ريال</span>
-                </div>
-                
+              </div>
+              
                 <button
                   onClick={sendToWhatsApp}
                   className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black py-4 px-6 rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3 shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -2122,25 +2273,78 @@ ${t('contact.whatsappThanks')}`;
 
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {/* Project Images */}
+              {/* Project Images Slider */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">صور المشروع</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedProject.images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={image.url}
-                        alt={`${selectedProject.title} - صورة ${index + 1}`}
-                        className="w-full h-64 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300"
-                      />
-                      {image.isPrimary && (
-                        <div className="absolute top-3 left-3 bg-emerald-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                          صورة رئيسية
-                        </div>
-                      )}
+                
+                {/* Main Image Display */}
+                <div className="relative mb-4">
+                  <div className="relative overflow-hidden rounded-2xl bg-gray-100">
+                    <img
+                      src={selectedProject.images[currentImageIndex]?.url}
+                      alt={`${selectedProject.title} - صورة ${currentImageIndex + 1}`}
+                      className="w-full h-96 object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+                      onClick={() => setIsFullscreenImage(true)}
+                    />
+                    
+                    {/* Navigation Arrows */}
+                    {selectedProject.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setCurrentImageIndex((prev) => 
+                            prev === 0 ? selectedProject.images.length - 1 : prev - 1
+                          )}
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all duration-300"
+                        >
+                          <ArrowLeft size={20} />
+                        </button>
+                        <button
+                          onClick={() => setCurrentImageIndex((prev) => 
+                            prev === selectedProject.images.length - 1 ? 0 : prev + 1
+                          )}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all duration-300"
+                        >
+                          <ArrowRight size={20} />
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Image Counter */}
+                    <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                      {currentImageIndex + 1} / {selectedProject.images.length}
                     </div>
-                  ))}
+                    
+                    {/* Primary Badge */}
+                    {selectedProject.images[currentImageIndex]?.isPrimary && (
+                      <div className="absolute top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                        صورة رئيسية
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Thumbnail Navigation */}
+                {selectedProject.images.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {selectedProject.images.map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                          index === currentImageIndex 
+                            ? 'border-emerald-500 ring-2 ring-emerald-200' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <img
+                          src={image.url}
+                          alt={`Thumbnail ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Project Description */}
@@ -2160,6 +2364,55 @@ ${t('contact.whatsappThanks')}`;
                   <p className="text-gray-700">{selectedProject.year}</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Image Modal */}
+      {isFullscreenImage && selectedProject && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="relative max-w-7xl max-h-full">
+            {/* Close Button */}
+            <button
+              onClick={() => setIsFullscreenImage(false)}
+              className="absolute top-4 right-4 z-10 w-12 h-12 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all duration-300"
+            >
+              <X size={24} />
+            </button>
+            
+            {/* Navigation Arrows */}
+            {selectedProject.images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentImageIndex((prev) => 
+                    prev === 0 ? selectedProject.images.length - 1 : prev - 1
+                  )}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 w-16 h-16 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all duration-300 z-10"
+                >
+                  <ArrowLeft size={24} />
+                </button>
+                <button
+                  onClick={() => setCurrentImageIndex((prev) => 
+                    prev === selectedProject.images.length - 1 ? 0 : prev + 1
+                  )}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 w-16 h-16 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all duration-300 z-10"
+                >
+                  <ArrowRight size={24} />
+                </button>
+              </>
+            )}
+            
+            {/* Fullscreen Image */}
+            <img
+              src={selectedProject.images[currentImageIndex]?.url}
+              alt={`${selectedProject.title} - صورة ${currentImageIndex + 1}`}
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            
+            {/* Image Info */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+              {currentImageIndex + 1} / {selectedProject.images.length}
             </div>
           </div>
         </div>

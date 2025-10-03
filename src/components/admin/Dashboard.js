@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebase";
-import { collection, addDoc, getDocs, doc, deleteDoc } from "firebase/firestore";
-import { Plus, Trash2, Edit, Save, X, Eye, BarChart3, Settings, FolderOpen, Star, Award, Sparkles, LogOut } from 'lucide-react';
+import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
+import { Plus, Trash2, Edit, Save, X, Eye, BarChart3, Settings, FolderOpen, Star, Award, Sparkles, LogOut, Users } from 'lucide-react';
 import Login from './Login';
 import "./Dashboard.css";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const Dashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -41,6 +42,15 @@ const Dashboard = () => {
   const [memberBio, setMemberBio] = useState("");
   const [memberBioEn, setMemberBioEn] = useState("");
   
+  // Clients management
+  const [clients, setClients] = useState([]);
+  const [clientName, setClientName] = useState("");
+  const [clientNameEn, setClientNameEn] = useState("");
+  const [clientLogo, setClientLogo] = useState("");
+  const [clientWebsite, setClientWebsite] = useState("");
+  const [clientDescription, setClientDescription] = useState("");
+  const [clientDescriptionEn, setClientDescriptionEn] = useState("");
+  
   // Contact management
   const [contactInfo, setContactInfo] = useState({
     phone: "",
@@ -61,6 +71,33 @@ const Dashboard = () => {
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isAddingService, setIsAddingService] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [isAddingClient, setIsAddingClient] = useState(false);
+
+  // Hero Section State & Functions
+  const [heroData, setHeroData] = useState({
+    ar: {
+      title: '',
+      subtitle: '',
+      description: '',
+      buttons: [
+        { label: '', link: '' },
+        { label: '', link: '' }
+      ]
+    },
+    en: {
+      title: '',
+      subtitle: '',
+      description: '',
+      buttons: [
+        { label: '', link: '' },
+        { label: '', link: '' }
+      ]
+    },
+    images: [], // array of image URLs
+    timer: 5
+  });
+  const [heroLoading, setHeroLoading] = useState(false);
+  const [heroSaving, setHeroSaving] = useState(false);
 
   // تحميل التصنيفات من Firebase
   const fetchCategories = async () => {
@@ -189,6 +226,20 @@ const Dashboard = () => {
     }
   };
 
+  // تحميل العملاء من Firebase
+  const fetchClients = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "clients"));
+      const clientsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setClients(clientsList);
+    } catch (error) {
+      console.error("خطأ في تحميل العملاء: ", error);
+    }
+  };
+
   // تحميل معلومات التواصل من Firebase
   const fetchContactInfo = async () => {
     try {
@@ -200,6 +251,46 @@ const Dashboard = () => {
     } catch (error) {
       console.error("خطأ في تحميل معلومات التواصل: ", error);
     }
+  };
+
+  // تحميل بيانات البانر من Firestore
+  const fetchHeroData = async () => {
+    setHeroLoading(true);
+    try {
+      const docRef = doc(db, 'settings', 'hero');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setHeroData(docSnap.data());
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل بيانات البانر:', error);
+    } finally {
+      setHeroLoading(false);
+    }
+  };
+
+  // حفظ بيانات البانر في Firestore
+  const saveHeroData = async () => {
+    setHeroSaving(true);
+    try {
+      const docRef = doc(db, 'settings', 'hero');
+      await setDoc(docRef, heroData);
+      alert('تم حفظ بيانات البانر بنجاح!');
+    } catch (error) {
+      console.error('خطأ في حفظ بيانات البانر:', error);
+      alert('حدث خطأ أثناء الحفظ');
+    } finally {
+      setHeroSaving(false);
+    }
+  };
+
+  // رفع صورة إلى Firebase Storage
+  const storage = getStorage();
+  const uploadHeroImage = async (file) => {
+    if (!file) return null;
+    const fileRef = storageRef(storage, `hero/${Date.now()}_${file.name}`);
+    await uploadBytes(fileRef, file);
+    return await getDownloadURL(fileRef);
   };
 
   // إضافة عضو فريق جديد
@@ -245,6 +336,47 @@ const Dashboard = () => {
     }
   };
 
+  // إضافة عميل جديد
+  const addClient = async (e) => {
+    e.preventDefault();
+    if (!clientName || !clientLogo) return;
+
+    try {
+      await addDoc(collection(db, "clients"), {
+        name: clientName,
+        name_en: clientNameEn || clientName,
+        logo: clientLogo,
+        website: clientWebsite,
+        description: clientDescription,
+        description_en: clientDescriptionEn || clientDescription,
+        createdAt: new Date().toISOString()
+      });
+      
+      setClientName("");
+      setClientNameEn("");
+      setClientLogo("");
+      setClientWebsite("");
+      setClientDescription("");
+      setClientDescriptionEn("");
+      setIsAddingClient(false);
+      fetchClients();
+    } catch (error) {
+      console.error("خطأ في إضافة العميل: ", error);
+    }
+  };
+
+  // حذف عميل
+  const deleteClient = async (id) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا العميل؟")) {
+      try {
+        await deleteDoc(doc(db, "clients", id));
+        fetchClients();
+      } catch (error) {
+        console.error("خطأ في حذف العميل: ", error);
+      }
+    }
+  };
+
   // حفظ معلومات التواصل
   const saveContactInfo = async (e) => {
     e.preventDefault();
@@ -285,8 +417,10 @@ const Dashboard = () => {
           fetchProjects();
           fetchServices();
           fetchTeam();
+          fetchClients();
           fetchContactInfo();
           fetchCategories();
+          fetchHeroData(); // Fetch hero data on login
         } else {
           // انتهت صلاحية الجلسة
           localStorage.removeItem('isLoggedIn');
@@ -307,7 +441,9 @@ const Dashboard = () => {
       fetchProjects();
       fetchServices();
       fetchTeam();
+      fetchClients();
       fetchContactInfo();
+      fetchHeroData(); // Fetch hero data on login
     }
   }, [isLoggedIn]);
 
@@ -492,6 +628,13 @@ const Dashboard = () => {
             <span>الفريق ({team.length})</span>
           </button>
           <button
+            className={`tab-button ${activeTab === 'clients' ? 'active' : ''}`}
+            onClick={() => setActiveTab('clients')}
+          >
+            <Users size={20} />
+            <span>العملاء ({clients.length})</span>
+          </button>
+          <button
             className={`tab-button ${activeTab === 'contact' ? 'active' : ''}`}
             onClick={() => setActiveTab('contact')}
           >
@@ -504,6 +647,16 @@ const Dashboard = () => {
           >
             <Settings size={20} />
             <span>التصنيفات</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'hero' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('hero');
+              fetchHeroData();
+            }}
+          >
+            <Star size={20} />
+            <span>البانر</span>
           </button>
           <button
             className={`tab-button ${activeTab === 'stats' ? 'active' : ''}`}
@@ -1038,6 +1191,175 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Clients Tab */}
+        {activeTab === 'clients' && (
+          <div className="tab-content">
+            {/* Add Client Form */}
+            <div className="content-card">
+              <div className="card-header">
+                <h2>إضافة عميل جديد</h2>
+                <button
+                  onClick={() => setIsAddingClient(!isAddingClient)}
+                  className="add-button"
+                >
+                  <Plus size={20} />
+                  {isAddingClient ? 'إلغاء' : 'إضافة عميل'}
+                </button>
+              </div>
+              
+              {isAddingClient && (
+                <form onSubmit={addClient} className="form-container">
+                  <div className="form-grid">
+                    <div className="input-field">
+                      <label>اسم العميل (AR) *</label>
+                      <input
+                        type="text"
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                        placeholder="مثال: شركة النجاح"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="input-field">
+                      <label>Client Name (EN)</label>
+                      <input
+                        type="text"
+                        value={clientNameEn}
+                        onChange={(e) => setClientNameEn(e.target.value)}
+                        placeholder="Example: Success Company"
+                      />
+                    </div>
+                    
+                    <div className="input-field">
+                      <label>رابط الشعار *</label>
+                      <input
+                        type="url"
+                        value={clientLogo}
+                        onChange={(e) => setClientLogo(e.target.value)}
+                        placeholder="https://example.com/logo.png"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="input-field">
+                      <label>الموقع الإلكتروني</label>
+                      <input
+                        type="url"
+                        value={clientWebsite}
+                        onChange={(e) => setClientWebsite(e.target.value)}
+                        placeholder="https://example.com"
+                      />
+                    </div>
+                    
+                    <div className="input-field full-width">
+                      <label>وصف العميل (AR)</label>
+                      <textarea
+                        value={clientDescription}
+                        onChange={(e) => setClientDescription(e.target.value)}
+                        placeholder="وصف مختصر عن العميل..."
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="input-field full-width">
+                      <label>Client Description (EN)</label>
+                      <textarea
+                        value={clientDescriptionEn}
+                        onChange={(e) => setClientDescriptionEn(e.target.value)}
+                        placeholder="Brief description about the client..."
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  
+                  <button type="submit" className="submit-button">
+                    <Save size={18} />
+                    إضافة العميل
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Clients List */}
+            <div className="content-card">
+              <div className="card-header">
+                <h2>العملاء الحاليين</h2>
+                <span className="count-badge">{clients.length} عميل</span>
+              </div>
+              
+              {isLoading ? (
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>جاري تحميل العملاء...</p>
+                </div>
+              ) : clients.length === 0 ? (
+                <div className="empty-state">
+                  <Users size={48} />
+                  <h3>لا يوجد عملاء حالياً</h3>
+                  <p>ابدأ بإضافة أول عميل</p>
+                </div>
+              ) : (
+                <div className="projects-grid">
+                  {clients.map((client) => (
+                    <div key={client.id} className="project-card">
+                      <div className="project-image">
+                        {client.logo ? (
+                          <img 
+                            src={client.logo} 
+                            alt={client.name}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="default-image"
+                          style={{ display: client.logo ? 'none' : 'flex' }}
+                        >
+                          <Users size={32} />
+                        </div>
+                      </div>
+                      
+                      <div className="project-content">
+                        <h3 className="project-title">{client.name}</h3>
+                        {client.description && (
+                          <p className="project-description">{client.description}</p>
+                        )}
+                        {client.website && (
+                          <a 
+                            href={client.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-emerald-600 hover:text-emerald-700 text-sm"
+                          >
+                            زيارة الموقع
+                          </a>
+                        )}
+                        
+                        <div className="project-meta">
+                          <span className="category-badge">عميل</span>
+                        </div>
+                      </div>
+                      
+                      <div className="project-actions">
+                        <button
+                          onClick={() => deleteClient(client.id)}
+                          className="action-button delete"
+                          title="حذف العميل"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Contact Tab */}
         {activeTab === 'contact' && (
           <div className="tab-content">
@@ -1325,6 +1647,332 @@ const Dashboard = () => {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Hero Tab */}
+        {activeTab === 'hero' && (
+          <div className="tab-content">
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Star size={24} />
+                  <span>إدارة البانر الرئيسي</span>
+                </div>
+              </div>
+              
+              {heroLoading ? (
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>جاري تحميل بيانات البانر...</p>
+                </div>
+              ) : (
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    saveHeroData();
+                  }}
+                  className="form-container"
+                >
+                  {/* النصوص العربية */}
+                  <div className="form-section">
+                    <h3 className="section-title">النصوص (عربي)</h3>
+                    <div className="form-grid">
+                      <div className="input-field">
+                        <label>العنوان الرئيسي</label>
+                        <input 
+                          type="text" 
+                          value={heroData.ar.title} 
+                          onChange={e => setHeroData(h => ({...h, ar: {...h.ar, title: e.target.value}}))} 
+                          className="input-field" 
+                          placeholder="أدخل العنوان الرئيسي"
+                        />
+                      </div>
+                      <div className="input-field">
+                        <label>العنوان الفرعي</label>
+                        <input 
+                          type="text" 
+                          value={heroData.ar.subtitle} 
+                          onChange={e => setHeroData(h => ({...h, ar: {...h.ar, subtitle: e.target.value}}))} 
+                          className="input-field" 
+                          placeholder="أدخل العنوان الفرعي"
+                        />
+                      </div>
+                    </div>
+                    <div className="input-field full-width">
+                      <label>الوصف</label>
+                      <textarea 
+                        value={heroData.ar.description} 
+                        onChange={e => setHeroData(h => ({...h, ar: {...h.ar, description: e.target.value}}))} 
+                        className="textarea-field" 
+                        placeholder="أدخل وصف البانر"
+                        rows="3"
+                      />
+                    </div>
+                    <div className="input-field full-width">
+                      <label>الأزرار</label>
+                      {heroData.ar.buttons.map((btn, i) => (
+                        <div key={i} className="flex gap-2 mb-2 items-center">
+                          <input 
+                            type="text" 
+                            placeholder="نص الزر" 
+                            value={btn.label} 
+                            onChange={e => {
+                              const newBtns = [...heroData.ar.buttons];
+                              newBtns[i].label = e.target.value;
+                              setHeroData(h => ({...h, ar: {...h.ar, buttons: newBtns}}));
+                            }} 
+                            className="input-field flex-1" 
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="رابط الزر" 
+                            value={btn.link} 
+                            onChange={e => {
+                              const newBtns = [...heroData.ar.buttons];
+                              newBtns[i].link = e.target.value;
+                              setHeroData(h => ({...h, ar: {...h.ar, buttons: newBtns}}));
+                            }} 
+                            className="input-field flex-1" 
+                          />
+                          <button 
+                            type="button" 
+                            className="action-button delete" 
+                            onClick={() => {
+                              setHeroData(h => ({...h, ar: {...h.ar, buttons: h.ar.buttons.filter((_, idx) => idx !== i)}}));
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        type="button" 
+                        className="submit-button secondary" 
+                        onClick={() => {
+                          setHeroData(h => ({...h, ar: {...h.ar, buttons: [...h.ar.buttons, {label: '', link: ''}]}}));
+                        }}
+                      >
+                        <Plus size={16} />
+                        إضافة زر جديد
+                      </button>
+                    </div>
+                  </div>
+                  {/* النصوص الإنجليزية */}
+                  <div className="form-section">
+                    <h3 className="section-title">النصوص (English)</h3>
+                    <div className="form-grid">
+                      <div className="input-field">
+                        <label>Title</label>
+                        <input 
+                          type="text" 
+                          value={heroData.en.title} 
+                          onChange={e => setHeroData(h => ({...h, en: {...h.en, title: e.target.value}}))} 
+                          className="input-field" 
+                          placeholder="Enter main title"
+                        />
+                      </div>
+                      <div className="input-field">
+                        <label>Subtitle</label>
+                        <input 
+                          type="text" 
+                          value={heroData.en.subtitle} 
+                          onChange={e => setHeroData(h => ({...h, en: {...h.en, subtitle: e.target.value}}))} 
+                          className="input-field" 
+                          placeholder="Enter subtitle"
+                        />
+                      </div>
+                    </div>
+                    <div className="input-field full-width">
+                      <label>Description</label>
+                      <textarea 
+                        value={heroData.en.description} 
+                        onChange={e => setHeroData(h => ({...h, en: {...h.en, description: e.target.value}}))} 
+                        className="textarea-field" 
+                        placeholder="Enter banner description"
+                        rows="3"
+                      />
+                    </div>
+                    <div className="input-field full-width">
+                      <label>Buttons</label>
+                      {heroData.en.buttons.map((btn, i) => (
+                        <div key={i} className="flex gap-2 mb-2 items-center">
+                          <input 
+                            type="text" 
+                            placeholder="Button text" 
+                            value={btn.label} 
+                            onChange={e => {
+                              const newBtns = [...heroData.en.buttons];
+                              newBtns[i].label = e.target.value;
+                              setHeroData(h => ({...h, en: {...h.en, buttons: newBtns}}));
+                            }} 
+                            className="input-field flex-1" 
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Button link" 
+                            value={btn.link} 
+                            onChange={e => {
+                              const newBtns = [...heroData.en.buttons];
+                              newBtns[i].link = e.target.value;
+                              setHeroData(h => ({...h, en: {...h.en, buttons: newBtns}}));
+                            }} 
+                            className="input-field flex-1" 
+                          />
+                          <button 
+                            type="button" 
+                            className="action-button delete" 
+                            onClick={() => {
+                              setHeroData(h => ({...h, en: {...h.en, buttons: h.en.buttons.filter((_, idx) => idx !== i)}}));
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        type="button" 
+                        className="submit-button secondary" 
+                        onClick={() => {
+                          setHeroData(h => ({...h, en: {...h.en, buttons: [...h.en.buttons, {label: '', link: ''}]}}));
+                        }}
+                      >
+                        <Plus size={16} />
+                        Add Button
+                      </button>
+                    </div>
+                  </div>
+                  {/* الصور */}
+                  <div className="form-section">
+                    <h3 className="section-title">صور البانر</h3>
+                    
+                    {/* عرض الصور المضافة */}
+                    {heroData.images && heroData.images.length > 0 && (
+                      <div className="images-preview mb-6">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">الصور المضافة ({heroData.images.length})</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {heroData.images.map((img, i) => (
+                            <div key={i} className="relative group">
+                              <img 
+                                src={img} 
+                                alt={`Banner ${i + 1}`} 
+                                className="w-full h-24 object-cover rounded-lg shadow border border-gray-200" 
+                                onError={e => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div 
+                                className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm"
+                                style={{ display: 'none' }}
+                              >
+                                خطأ في الصورة
+                              </div>
+                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  type="button" 
+                                  className="action-button delete" 
+                                  onClick={() => {
+                                    setHeroData(h => ({...h, images: h.images.filter((_, idx) => idx !== i)}));
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* إضافة صورة جديدة */}
+                    <div className="add-image-section">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">إضافة صورة جديدة</h4>
+                      <div className="form-grid">
+                        <div className="input-field">
+                          <label>رابط الصورة (URL)</label>
+                          <input 
+                            type="url" 
+                            className="input-field" 
+                            placeholder="https://example.com/image.jpg" 
+                            value={heroData.newImageUrl || ''} 
+                            onChange={e => setHeroData(h => ({...h, newImageUrl: e.target.value}))} 
+                          />
+                        </div>
+                        <div className="input-field">
+                          <label>أو ارفع من جهازك</label>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="input-field" 
+                            onChange={async e => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                try {
+                                  const url = await uploadHeroImage(file);
+                                  setHeroData(h => ({...h, images: [...h.images, url]}));
+                                } catch (error) {
+                                  alert('خطأ في رفع الصورة');
+                                }
+                              }
+                            }} 
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        className="submit-button secondary" 
+                        onClick={() => {
+                          if (heroData.newImageUrl && heroData.newImageUrl.startsWith('http')) {
+                            setHeroData(h => ({...h, images: [...h.images, h.newImageUrl], newImageUrl: ''}));
+                          } else {
+                            alert('يرجى إدخال رابط صحيح للصورة');
+                          }
+                        }}
+                      >
+                        <Plus size={16} />
+                        إضافة الصورة
+                      </button>
+                    </div>
+                  </div>
+                  {/* التايمر */}
+                  <div className="form-section">
+                    <div className="input-field">
+                      <label>مدة التبديل بين الصور (بالثواني)</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="30"
+                        value={heroData.timer} 
+                        onChange={e => setHeroData(h => ({...h, timer: Number(e.target.value)}))} 
+                        className="input-field w-32" 
+                        placeholder="5"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* أزرار الحفظ */}
+                  <div className="form-actions">
+                    <button 
+                      type="submit" 
+                      className="submit-button primary" 
+                      disabled={heroSaving}
+                    >
+                      <Save size={20} />
+                      {heroSaving ? 'جاري الحفظ...' : 'حفظ البانر'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="submit-button secondary" 
+                      onClick={() => fetchHeroData()}
+                    >
+                      <X size={20} />
+                      إلغاء
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
           </div>
