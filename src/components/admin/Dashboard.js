@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { db } from "../../firebase";
-import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { Plus, Trash2, Edit, Save, X, Eye, BarChart3, Settings, FolderOpen, Star, Award, Sparkles, LogOut, Users } from 'lucide-react';
 import Login from './Login';
 import "./Dashboard.css";
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState("");
   const [newCategoryEn, setNewCategoryEn] = useState("");
+  const [newCategoryEmoji, setNewCategoryEmoji] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
   // Services management
@@ -30,7 +31,26 @@ const Dashboard = () => {
   const [serviceDescription, setServiceDescription] = useState("");
   const [serviceDescriptionEn, setServiceDescriptionEn] = useState("");
   const [serviceIcon, setServiceIcon] = useState("");
+
+  // Testimonials management
+  const [testimonials, setTestimonials] = useState([]);
+  const [testimonialName, setTestimonialName] = useState("");
+  const [testimonialNameEn, setTestimonialNameEn] = useState("");
+  const [testimonialCompany, setTestimonialCompany] = useState("");
+  const [testimonialCompanyEn, setTestimonialCompanyEn] = useState("");
+  const [testimonialPosition, setTestimonialPosition] = useState("");
+  const [testimonialPositionEn, setTestimonialPositionEn] = useState("");
+  const [testimonialComment, setTestimonialComment] = useState("");
+  const [testimonialCommentEn, setTestimonialCommentEn] = useState("");
+  const [testimonialProject, setTestimonialProject] = useState("");
+  const [testimonialProjectEn, setTestimonialProjectEn] = useState("");
+  const [testimonialImage, setTestimonialImage] = useState("");
+  const [testimonialRating, setTestimonialRating] = useState(5);
+  const [testimonialGradient, setTestimonialGradient] = useState("from-emerald-500 to-teal-500");
+  const [isAddingTestimonial, setIsAddingTestimonial] = useState(false);
   const [servicePrice, setServicePrice] = useState("");
+  const [serviceFeatured, setServiceFeatured] = useState(false);
+  const [serviceOrder, setServiceOrder] = useState(0);
   
   // Team management
   const [team, setTeam] = useState([]);
@@ -73,6 +93,37 @@ const Dashboard = () => {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [isAddingClient, setIsAddingClient] = useState(false);
 
+  // Edit states (Projects/Services/Testimonials)
+  const [editingProjectId, setEditingProjectId] = useState(null);
+  const [editProjectData, setEditProjectData] = useState(null);
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  const [editServiceData, setEditServiceData] = useState(null);
+  const [editingTestimonialId, setEditingTestimonialId] = useState(null);
+  const [editTestimonialData, setEditTestimonialData] = useState(null);
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editTeamData, setEditTeamData] = useState(null);
+  
+  // Preview modal states
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewProject, setPreviewProject] = useState(null);
+  
+  // Image preview in edit modal
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+
+  // Visibility settings
+  const [visibility, setVisibility] = useState({
+    projects: true,
+    services: true,
+    team: true,
+    clients: true,
+    contact: true,
+    categories: true,
+    hero: true,
+    stats: true
+  });
+  const [savingVisibility, setSavingVisibility] = useState(false);
+
   // Hero Section State & Functions
   const [heroData, setHeroData] = useState({
     ar: {
@@ -99,6 +150,55 @@ const Dashboard = () => {
   const [heroLoading, setHeroLoading] = useState(false);
   const [heroSaving, setHeroSaving] = useState(false);
 
+  // About & Why Choose Us
+  const [aboutData, setAboutData] = useState({
+    ar: { 
+      title: '', 
+      content: '',
+      story: { icon: '🏢', title: 'قصتنا', description: '' },
+      visionMission: { 
+        icon: '🎯',
+        title: 'رؤيتنا ورسالتنا',
+        vision: { title: 'الرؤية', description: '' },
+        mission: { title: 'الرسالة', description: '' }
+      },
+      values: [
+        { icon: '⏰', title: 'الالتزام', description: '' },
+        { icon: '⭐', title: 'الجودة', description: '' },
+        { icon: '💡', title: 'الإبداع', description: '' },
+        { icon: '🚀', title: 'التميز', description: '' }
+      ],
+      stats: { years: '15+', projects: '100+' }
+    },
+    en: { 
+      title: '', 
+      content: '',
+      story: { icon: '🏢', title: 'Our Story', description: '' },
+      visionMission: { 
+        icon: '🎯',
+        title: 'Vision & Mission',
+        vision: { title: 'Vision', description: '' },
+        mission: { title: 'Mission', description: '' }
+      },
+      values: [
+        { icon: '⏰', title: 'Commitment', description: '' },
+        { icon: '⭐', title: 'Quality', description: '' },
+        { icon: '💡', title: 'Creativity', description: '' },
+        { icon: '🚀', title: 'Excellence', description: '' }
+      ],
+      stats: { years: '15+', projects: '100+' }
+    }
+  });
+  const [aboutLoading, setAboutLoading] = useState(false);
+  const [aboutSaving, setAboutSaving] = useState(false);
+
+  const [whyData, setWhyData] = useState({
+    ar: { title: '', items: [{ icon: '✅', title: '', description: '' }] },
+    en: { title: '', items: [{ icon: '✅', title: '', description: '' }] }
+  });
+  const [whyLoading, setWhyLoading] = useState(false);
+  const [whySaving, setWhySaving] = useState(false);
+
   // تحميل التصنيفات من Firebase
   const fetchCategories = async () => {
     try {
@@ -124,15 +224,107 @@ const Dashboard = () => {
       await addDoc(collection(db, "categories"), {
         name: newCategory,
         name_en: newCategoryEn,
+        emoji: newCategoryEmoji || "",
         createdAt: new Date().toISOString()
       });
       alert("تمت إضافة التصنيف بنجاح!");
       setNewCategory("");
       setNewCategoryEn("");
+      setNewCategoryEmoji("");
       fetchCategories();
     } catch (error) {
       console.error("خطأ في إضافة التصنيف: ", error);
       alert("حدث خطأ في إضافة التصنيف");
+    }
+  };
+
+  // Project editing handlers
+  const openEditProject = (project) => {
+    setEditingProjectId(project.id);
+    setEditProjectData({
+      title: project.title || "",
+      title_en: project.title_en || project.title || "",
+      description: project.description || "",
+      description_en: project.description_en || project.description || "",
+      category: project.category || "",
+      year: project.year || "",
+      images: Array.isArray(project.images) ? [...project.images] : []
+    });
+  };
+
+  const cancelProjectEdit = () => {
+    setEditingProjectId(null);
+    setEditProjectData(null);
+  };
+
+  const saveProjectEdit = async () => {
+    if (!editingProjectId || !editProjectData) return;
+    try {
+      setIsLoading(true);
+      const ref = doc(db, "projects", editingProjectId);
+      await updateDoc(ref, {
+        title: editProjectData.title,
+        title_en: editProjectData.title_en || editProjectData.title,
+        description: editProjectData.description,
+        description_en: editProjectData.description_en || editProjectData.description,
+        category: editProjectData.category,
+        year: editProjectData.year,
+        images: (editProjectData.images || []).filter(img => img && img.url)
+      });
+      await fetchProjects();
+      cancelProjectEdit();
+      alert("تم حفظ التعديلات بنجاح!");
+    } catch (error) {
+      console.error("خطأ في حفظ تعديل المشروع: ", error);
+      alert("حدث خطأ أثناء حفظ التعديلات");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Service editing handlers
+  const openEditService = (service) => {
+    setEditingServiceId(service.id);
+    setEditServiceData({
+      title: service.title || "",
+      title_en: service.title_en || service.title || "",
+      description: service.description || "",
+      description_en: service.description_en || service.description || "",
+      icon: service.icon || "",
+      price: service.price || 0,
+      featured: !!service.featured,
+      order: service.order ?? 0
+    });
+  };
+
+  const cancelServiceEdit = () => {
+    setEditingServiceId(null);
+    setEditServiceData(null);
+  };
+
+  const saveServiceEdit = async () => {
+    if (!editingServiceId || !editServiceData) return;
+    try {
+      setIsLoading(true);
+      const ref = doc(db, "services", editingServiceId);
+      await updateDoc(ref, {
+        title: editServiceData.title,
+        title_en: editServiceData.title_en || editServiceData.title,
+        description: editServiceData.description,
+        description_en: editServiceData.description_en || editServiceData.description,
+        icon: editServiceData.icon,
+        price: Number(editServiceData.price) || 0,
+        featured: !!editServiceData.featured,
+        order: Number(editServiceData.order) || 0
+      });
+      await fetchServices();
+      cancelServiceEdit();
+      alert("تم حفظ تعديل الخدمة بنجاح!");
+    } catch (error) {
+      console.error("خطأ في حفظ تعديل الخدمة: ", error);
+      alert("حدث خطأ أثناء حفظ التعديلات");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -181,6 +373,38 @@ const Dashboard = () => {
     setImages(newImages);
   };
 
+  // Editing project images helpers
+  const setEditProjectImageUrl = (index, url) => {
+    if (!editProjectData) return;
+    const updated = { ...editProjectData, images: [...(editProjectData.images || [])] };
+    updated.images[index] = { ...(updated.images[index] || { isPrimary: false }), url };
+    setEditProjectData(updated);
+  };
+
+  const setEditProjectPrimary = (index) => {
+    if (!editProjectData) return;
+    const updatedImages = (editProjectData.images || []).map((img, i) => ({
+      ...img,
+      isPrimary: i === index
+    }));
+    setEditProjectData({ ...editProjectData, images: updatedImages });
+  };
+
+  const addEditProjectImage = () => {
+    if (!editProjectData) return;
+    setEditProjectData({ ...editProjectData, images: [...(editProjectData.images || []), { url: "", isPrimary: false }] });
+  };
+
+  const removeEditProjectImage = (index) => {
+    if (!editProjectData) return;
+    const updated = [...(editProjectData.images || [])].filter((_, i) => i !== index);
+    // Ensure at least one primary remains if any images exist
+    if (updated.length > 0 && !updated.some(img => img.isPrimary)) {
+      updated[0].isPrimary = true;
+    }
+    setEditProjectData({ ...editProjectData, images: updated });
+  };
+
   // تحميل المشاريع من Firebase
   const fetchProjects = async () => {
     try {
@@ -209,6 +433,20 @@ const Dashboard = () => {
       setServices(servicesList);
     } catch (error) {
       console.error("خطأ في تحميل الخدمات: ", error);
+    }
+  };
+
+  // تحميل آراء العملاء من Firebase
+  const fetchTestimonials = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "testimonials"));
+      const testimonialsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTestimonials(testimonialsList);
+    } catch (error) {
+      console.error("خطأ في تحميل آراء العملاء: ", error);
     }
   };
 
@@ -266,6 +504,90 @@ const Dashboard = () => {
       console.error('خطأ في تحميل بيانات البانر:', error);
     } finally {
       setHeroLoading(false);
+    }
+  };
+
+  // About fetch/save
+  const fetchAboutData = async () => {
+    setAboutLoading(true);
+    try {
+      const docRef = doc(db, 'settings', 'about');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) setAboutData(docSnap.data());
+    } catch (e) {
+      console.error('خطأ في تحميل من نحن:', e);
+    } finally {
+      setAboutLoading(false);
+    }
+  };
+
+  const saveAboutData = async () => {
+    setAboutSaving(true);
+    try {
+      const docRef = doc(db, 'settings', 'about');
+      await setDoc(docRef, aboutData, { merge: true });
+      alert('تم حفظ قسم من نحن');
+    } catch (e) {
+      console.error('خطأ في حفظ من نحن:', e);
+      alert('حدث خطأ أثناء الحفظ');
+    } finally {
+      setAboutSaving(false);
+    }
+  };
+
+  // Why Choose Us fetch/save
+  const fetchWhyData = async () => {
+    setWhyLoading(true);
+    try {
+      const docRef = doc(db, 'settings', 'whyChoose');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) setWhyData(docSnap.data());
+    } catch (e) {
+      console.error('خطأ في تحميل لماذا تختارنا:', e);
+    } finally {
+      setWhyLoading(false);
+    }
+  };
+
+  const saveWhyData = async () => {
+    setWhySaving(true);
+    try {
+      const docRef = doc(db, 'settings', 'whyChoose');
+      await setDoc(docRef, whyData, { merge: true });
+      alert('تم حفظ قسم لماذا تختارنا');
+    } catch (e) {
+      console.error('خطأ في حفظ لماذا تختارنا:', e);
+      alert('حدث خطأ أثناء الحفظ');
+    } finally {
+      setWhySaving(false);
+    }
+  };
+
+  // تحميل إعدادات الظهور من Firestore
+  const fetchVisibility = useCallback(async () => {
+    try {
+      const docRef = doc(db, 'settings', 'visibility');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setVisibility({ ...visibility, ...docSnap.data() });
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل إعدادات الظهور:', error);
+    }
+  }, [visibility]);
+
+  // حفظ إعدادات الظهور
+  const saveVisibility = async () => {
+    try {
+      setSavingVisibility(true);
+      const docRef = doc(db, 'settings', 'visibility');
+      await setDoc(docRef, visibility, { merge: true });
+      alert('تم حفظ إعدادات الظهور');
+    } catch (error) {
+      console.error('خطأ في حفظ إعدادات الظهور:', error);
+      alert('حدث خطأ أثناء الحفظ');
+    } finally {
+      setSavingVisibility(false);
     }
   };
 
@@ -416,11 +738,15 @@ const Dashboard = () => {
           setIsLoggedIn(true);
           fetchProjects();
           fetchServices();
+          fetchTestimonials();
           fetchTeam();
           fetchClients();
           fetchContactInfo();
           fetchCategories();
           fetchHeroData(); // Fetch hero data on login
+          fetchAboutData();
+          fetchWhyData();
+          fetchVisibility();
         } else {
           // انتهت صلاحية الجلسة
           localStorage.removeItem('isLoggedIn');
@@ -433,19 +759,23 @@ const Dashboard = () => {
     };
 
     checkLoginStatus();
-  }, []);
+  }, [fetchVisibility]);
 
   // تحميل البيانات عند تسجيل الدخول
   useEffect(() => {
     if (isLoggedIn) {
       fetchProjects();
       fetchServices();
+      fetchTestimonials();
       fetchTeam();
       fetchClients();
       fetchContactInfo();
-      fetchHeroData(); // Fetch hero data on login
+      fetchHeroData();
+      fetchAboutData();
+      fetchWhyData();
+      fetchVisibility();
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, fetchVisibility]);
 
   // دالة تسجيل الخروج
   const handleLogout = () => {
@@ -530,6 +860,8 @@ const Dashboard = () => {
         description_en: serviceDescriptionEn || serviceDescription,
         icon: serviceIcon,
         price: servicePrice || 0,
+        featured: !!serviceFeatured,
+        order: Number(serviceOrder) || 0,
         createdAt: new Date().toISOString()
       });
       alert("تمت إضافة الخدمة بنجاح!");
@@ -541,6 +873,8 @@ const Dashboard = () => {
       setServiceDescriptionEn("");
       setServiceIcon("");
       setServicePrice("");
+      setServiceFeatured(false);
+      setServiceOrder(0);
       setIsAddingService(false);
       
       // إعادة تحميل الخدمات
@@ -567,15 +901,112 @@ const Dashboard = () => {
     }
   };
 
+  // إضافة رأي عميل جديد
+  const addTestimonial = async () => {
+    if (!testimonialName || !testimonialComment) {
+      alert("يرجى ملء الاسم والتعليق على الأقل");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await addDoc(collection(db, "testimonials"), {
+        name: testimonialName,
+        nameEn: testimonialNameEn,
+        company: testimonialCompany,
+        companyEn: testimonialCompanyEn,
+        position: testimonialPosition,
+        positionEn: testimonialPositionEn,
+        comment: testimonialComment,
+        commentEn: testimonialCommentEn,
+        project: testimonialProject,
+        projectEn: testimonialProjectEn,
+        image: testimonialImage,
+        rating: testimonialRating,
+        gradient: testimonialGradient,
+        isVisible: true,
+        createdAt: new Date()
+      });
+
+      // إعادة تعيين الحقول
+      setTestimonialName("");
+      setTestimonialNameEn("");
+      setTestimonialCompany("");
+      setTestimonialCompanyEn("");
+      setTestimonialPosition("");
+      setTestimonialPositionEn("");
+      setTestimonialComment("");
+      setTestimonialCommentEn("");
+      setTestimonialProject("");
+      setTestimonialProjectEn("");
+      setTestimonialImage("");
+      setTestimonialRating(5);
+      setTestimonialGradient("from-emerald-500 to-teal-500");
+      
+      // إعادة تحميل آراء العملاء
+      await fetchTestimonials();
+      alert("تم إضافة رأي العميل بنجاح!");
+    } catch (error) {
+      console.error("خطأ في إضافة رأي العميل: ", error);
+      alert("حدث خطأ في إضافة رأي العميل");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // حذف رأي عميل
+  const deleteTestimonial = async (testimonialId) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا الرأي؟")) {
+      try {
+        await deleteDoc(doc(db, "testimonials", testimonialId));
+        alert("تم حذف رأي العميل بنجاح!");
+        await fetchTestimonials();
+      } catch (error) {
+        console.error("خطأ في حذف رأي العميل: ", error);
+        alert("حدث خطأ في حذف رأي العميل");
+      }
+    }
+  };
+
+  // فتح معاينة المشروع
+  const openProjectPreview = (project) => {
+    setPreviewProject(project);
+    setPreviewModalOpen(true);
+  };
+
+  // إغلاق معاينة المشروع
+  const closeProjectPreview = () => {
+    setPreviewModalOpen(false);
+    setPreviewProject(null);
+  };
+
+  // فتح معاينة الصورة في التعديل
+  const openImagePreview = (image) => {
+    setPreviewImage(image);
+    setImagePreviewOpen(true);
+  };
+
+  // إغلاق معاينة الصورة
+  const closeImagePreview = () => {
+    setImagePreviewOpen(false);
+    setPreviewImage(null);
+  };
+
   const getCategoryDisplayName = (category) => {
-    const categories = {
+    // Try to resolve from Firestore categories first
+    const cat = categories.find((c) => c.id === category);
+    if (cat) return `${cat.emoji ? cat.emoji + " " : ""}${cat.name}`;
+    // Fallback to defaults
+    const defaultMap = {
       "exterior-design": "🏢 تصميم خارجي",
       "interior-design": "🏠 تصميم داخلي",
       "execution-plans": "📐 مخططات تنفيذية",
       "branding": "🎨 هوية بصرية"
     };
-    return categories[category] || category;
+    return defaultMap[category] || category;
   };
+
+  const [projectDetailsId, setProjectDetailsId] = useState(null);
 
   // عرض شاشة الدخول إذا لم يكن المستخدم مسجل الدخول
   if (!isLoggedIn) {
@@ -621,6 +1052,20 @@ const Dashboard = () => {
             <span>الخدمات ({services.length})</span>
           </button>
           <button
+            className={`tab-button ${activeTab === 'works' ? 'active' : ''}`}
+            onClick={() => setActiveTab('works')}
+          >
+            <FolderOpen size={20} />
+            <span>المشاريع ({projects.length})</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'testimonials' ? 'active' : ''}`}
+            onClick={() => setActiveTab('testimonials')}
+          >
+            <Award size={20} />
+            <span>آراء العملاء ({testimonials.length})</span>
+          </button>
+          <button
             className={`tab-button ${activeTab === 'team' ? 'active' : ''}`}
             onClick={() => setActiveTab('team')}
           >
@@ -664,6 +1109,27 @@ const Dashboard = () => {
           >
             <BarChart3 size={20} />
             <span>الإحصائيات</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'about' ? 'active' : ''}`}
+            onClick={() => setActiveTab('about')}
+          >
+            <Sparkles size={20} />
+            <span>من نحن</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'why' ? 'active' : ''}`}
+            onClick={() => setActiveTab('why')}
+          >
+            <Star size={20} />
+            <span>لماذا تختارنا؟</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'visibility' ? 'active' : ''}`}
+            onClick={() => setActiveTab('visibility')}
+          >
+            <Eye size={20} />
+            <span>الظهور</span>
           </button>
         </div>
       </div>
@@ -838,6 +1304,113 @@ const Dashboard = () => {
                           <span className="thumbnail-emoji">{project.thumbnail}</span>
                         )}
                       </div>
+                      {editingProjectId === project.id ? (
+                        <div className="project-info">
+                          <input
+                            type="text"
+                            className="input-field mb-2"
+                            value={editProjectData?.title || ''}
+                            onChange={(e) => setEditProjectData({ ...editProjectData, title: e.target.value })}
+                            placeholder="عنوان المشروع (AR)"
+                          />
+                          <input
+                            type="text"
+                            className="input-field mb-2"
+                            value={editProjectData?.title_en || ''}
+                            onChange={(e) => setEditProjectData({ ...editProjectData, title_en: e.target.value })}
+                            placeholder="Project Title (EN)"
+                          />
+                          <select
+                            className="input-field mb-2"
+                            value={editProjectData?.category || ''}
+                            onChange={(e) => setEditProjectData({ ...editProjectData, category: e.target.value })}
+                          >
+                            <option value="">اختر التصنيف</option>
+                            {categories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.emoji ? cat.emoji + ' ' : ''}{cat.name}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            className="input-field mb-2"
+                            value={editProjectData?.year || ''}
+                            onChange={(e) => setEditProjectData({ ...editProjectData, year: e.target.value })}
+                            placeholder="السنة"
+                          />
+                          <textarea
+                            className="textarea-field mb-2"
+                            value={editProjectData?.description || ''}
+                            onChange={(e) => setEditProjectData({ ...editProjectData, description: e.target.value })}
+                            placeholder="وصف المشروع (AR)"
+                            rows="3"
+                          />
+                          <textarea
+                            className="textarea-field mb-2"
+                            value={editProjectData?.description_en || ''}
+                            onChange={(e) => setEditProjectData({ ...editProjectData, description_en: e.target.value })}
+                            placeholder="Project Description (EN)"
+                            rows="3"
+                          />
+                          <div className="input-field full-width">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">صور المشروع</label>
+                            {(editProjectData?.images || []).map((image, index) => (
+                              <div key={index} className="flex items-center gap-2 mb-2">
+                                <input
+                                  type="url"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  placeholder="رابط الصورة"
+                                  value={image.url || ''}
+                                  onChange={(e) => setEditProjectImageUrl(index, e.target.value)}
+                                />
+                                {image.url && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openImagePreview(image)}
+                                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                    title="عرض الصورة"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setEditProjectPrimary(index)}
+                                  className={`px-3 py-2 rounded-lg text-sm font-medium ${image.isPrimary ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                >
+                                  رئيسية
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditProjectImage(index)}
+                                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                                >
+                                  حذف
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={addEditProjectImage}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+                            >
+                              + إضافة صورة
+                            </button>
+                          </div>
+                          <div className="project-actions mt-3">
+                            <button className="submit-button primary" onClick={saveProjectEdit} disabled={isLoading}>
+                              <Save size={16} />
+                              حفظ
+                            </button>
+                            <button className="submit-button secondary" onClick={cancelProjectEdit}>
+                              <X size={16} />
+                              إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                       <div className="project-info">
                         <h3 className="project-title">{project.title}</h3>
                         <p className="project-description">{project.description}</p>
@@ -848,14 +1421,23 @@ const Dashboard = () => {
                       </div>
                       <div className="project-actions">
                         <button 
-                          className="action-button view"
-                          title="عرض المشروع"
+                          className="action-button preview"
+                          title="معاينة سريعة"
+                          onClick={() => openProjectPreview(project)}
                         >
                           <Eye size={16} />
                         </button>
                         <button 
+                          className="action-button view"
+                          title="عرض المشروع"
+                              onClick={() => setProjectDetailsId(project.id)}
+                        >
+                          <BarChart3 size={16} />
+                        </button>
+                        <button 
                           className="action-button edit"
                           title="تعديل المشروع"
+                              onClick={() => openEditProject(project)}
                         >
                           <Edit size={16} />
                         </button>
@@ -867,6 +1449,8 @@ const Dashboard = () => {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -923,6 +1507,17 @@ const Dashboard = () => {
                       placeholder="سعر الخدمة (بالريال)"
                       value={servicePrice}
                       onChange={(e) => setServicePrice(e.target.value)}
+                    />
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={serviceFeatured} onChange={(e)=> setServiceFeatured(e.target.checked)} />
+                      <span>مميزة</span>
+                    </label>
+                    <input
+                      type="number"
+                      className="input-field"
+                      placeholder="ترتيب العرض (رقم)"
+                      value={serviceOrder}
+                      onChange={(e) => setServiceOrder(e.target.value)}
                     />
                   </div>
                   <textarea
@@ -985,6 +1580,74 @@ const Dashboard = () => {
                 <div className="services-grid">
                   {services.map((service) => (
                     <div key={service.id} className="service-card">
+                      {editingServiceId === service.id ? (
+                        <div className="service-info w-full">
+                          <input
+                            type="text"
+                            className="input-field mb-2"
+                            value={editServiceData?.title || ''}
+                            onChange={(e) => setEditServiceData({ ...editServiceData, title: e.target.value })}
+                            placeholder="عنوان الخدمة (AR)"
+                          />
+                          <input
+                            type="text"
+                            className="input-field mb-2"
+                            value={editServiceData?.title_en || ''}
+                            onChange={(e) => setEditServiceData({ ...editServiceData, title_en: e.target.value })}
+                            placeholder="Service Title (EN)"
+                          />
+                          <input
+                            type="text"
+                            className="input-field mb-2"
+                            value={editServiceData?.icon || ''}
+                            onChange={(e) => setEditServiceData({ ...editServiceData, icon: e.target.value })}
+                            placeholder="رمز الخدمة (مثل: 🏗️)"
+                          />
+                          <input
+                            type="number"
+                            className="input-field mb-2"
+                            value={editServiceData?.price || 0}
+                            onChange={(e) => setEditServiceData({ ...editServiceData, price: e.target.value })}
+                            placeholder="سعر الخدمة (بالريال)"
+                          />
+                          <textarea
+                            className="textarea-field mb-2"
+                            value={editServiceData?.description || ''}
+                            onChange={(e) => setEditServiceData({ ...editServiceData, description: e.target.value })}
+                            placeholder="وصف الخدمة (AR)"
+                            rows="3"
+                          />
+                          <textarea
+                            className="textarea-field mb-2"
+                            value={editServiceData?.description_en || ''}
+                            onChange={(e) => setEditServiceData({ ...editServiceData, description_en: e.target.value })}
+                            placeholder="Service Description (EN)"
+                            rows="3"
+                          />
+                      <label className="flex items-center gap-2 mb-2">
+                        <input type="checkbox" checked={!!editServiceData?.featured} onChange={(e)=> setEditServiceData({ ...editServiceData, featured: e.target.checked })} />
+                        <span>مميزة</span>
+                      </label>
+                      <input
+                        type="number"
+                        className="input-field mb-2"
+                        value={editServiceData?.order ?? 0}
+                        onChange={(e) => setEditServiceData({ ...editServiceData, order: e.target.value })}
+                        placeholder="ترتيب العرض (رقم)"
+                      />
+                          <div className="service-actions mt-2">
+                            <button className="submit-button primary" onClick={saveServiceEdit} disabled={isLoading}>
+                              <Save size={16} />
+                              حفظ
+                            </button>
+                            <button className="submit-button secondary" onClick={cancelServiceEdit}>
+                              <X size={16} />
+                              إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                       <div className="service-icon">
                         <span className="icon-emoji">{service.icon}</span>
                       </div>
@@ -1002,6 +1665,7 @@ const Dashboard = () => {
                         <button 
                           className="action-button edit"
                           title="تعديل الخدمة"
+                              onClick={() => openEditService(service)}
                         >
                           <Edit size={16} />
                         </button>
@@ -1013,6 +1677,294 @@ const Dashboard = () => {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Works Tab */}
+        {activeTab === 'works' && (
+          <div className="tab-content">
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <FolderOpen size={24} />
+                  <span>إدارة المشاريع</span>
+                </div>
+              </div>
+              
+              <div className="info-section">
+                <h3>المشاريع المعروضة في قسم "أعمالنا"</h3>
+                <p>هذا التبويب يعرض جميع المشاريع التي تم إضافتها في تبويب "المشاريع". يمكنك إدارة المشاريع من هناك.</p>
+                
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <div className="stat-icon">
+                      <FolderOpen size={24} />
+                    </div>
+                    <div className="stat-content">
+                      <h4>إجمالي المشاريع</h4>
+                      <p className="stat-number">{projects.length}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="stat-card">
+                    <div className="stat-icon">
+                      <Eye size={24} />
+                    </div>
+                    <div className="stat-content">
+                      <h4>المشاريع المرئية</h4>
+                      <p className="stat-number">{projects.filter(p => p.isVisible !== false).length}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="stat-card">
+                    <div className="stat-icon">
+                      <Award size={24} />
+                    </div>
+                    <div className="stat-content">
+                      <h4>المشاريع المميزة</h4>
+                      <p className="stat-number">{projects.filter(p => p.featured).length}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="action-buttons">
+                  <button 
+                    className="submit-button primary"
+                    onClick={() => setActiveTab('projects')}
+                  >
+                    <FolderOpen size={20} />
+                    إدارة المشاريع
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Testimonials Tab */}
+        {activeTab === 'testimonials' && (
+          <div className="tab-content">
+            {/* Add Testimonial Section */}
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Award size={24} />
+                  <span>إضافة رأي عميل جديد</span>
+                </div>
+                <button
+                  className={`toggle-button ${isAddingTestimonial ? 'active' : ''}`}
+                  onClick={() => setIsAddingTestimonial(!isAddingTestimonial)}
+                >
+                  {isAddingTestimonial ? <X size={20} /> : <Plus size={20} />}
+                </button>
+              </div>
+              
+              {isAddingTestimonial && (
+                <div className="form-container">
+                  <div className="form-grid">
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="اسم العميل (AR)"
+                      value={testimonialName}
+                      onChange={(e) => setTestimonialName(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Client Name (EN)"
+                      value={testimonialNameEn}
+                      onChange={(e) => setTestimonialNameEn(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="الشركة (AR)"
+                      value={testimonialCompany}
+                      onChange={(e) => setTestimonialCompany(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Company (EN)"
+                      value={testimonialCompanyEn}
+                      onChange={(e) => setTestimonialCompanyEn(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="المنصب (AR)"
+                      value={testimonialPosition}
+                      onChange={(e) => setTestimonialPosition(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Position (EN)"
+                      value={testimonialPositionEn}
+                      onChange={(e) => setTestimonialPositionEn(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="المشروع (AR)"
+                      value={testimonialProject}
+                      onChange={(e) => setTestimonialProject(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Project (EN)"
+                      value={testimonialProjectEn}
+                      onChange={(e) => setTestimonialProjectEn(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="رابط الصورة"
+                      value={testimonialImage}
+                      onChange={(e) => setTestimonialImage(e.target.value)}
+                    />
+                    <select
+                      className="input-field"
+                      value={testimonialRating}
+                      onChange={(e) => setTestimonialRating(parseInt(e.target.value))}
+                    >
+                      <option value={1}>⭐ (1)</option>
+                      <option value={2}>⭐⭐ (2)</option>
+                      <option value={3}>⭐⭐⭐ (3)</option>
+                      <option value={4}>⭐⭐⭐⭐ (4)</option>
+                      <option value={5}>⭐⭐⭐⭐⭐ (5)</option>
+                    </select>
+                    <select
+                      className="input-field"
+                      value={testimonialGradient}
+                      onChange={(e) => setTestimonialGradient(e.target.value)}
+                    >
+                      <option value="from-emerald-500 to-teal-500">أخضر</option>
+                      <option value="from-teal-500 to-cyan-500">تركوازي</option>
+                      <option value="from-stone-400 to-emerald-500">رمادي-أخضر</option>
+                      <option value="from-emerald-600 to-teal-600">أخضر داكن</option>
+                      <option value="from-teal-600 to-emerald-600">تركوازي داكن</option>
+                      <option value="from-emerald-700 to-teal-700">أخضر جداً</option>
+                    </select>
+                  </div>
+                  <textarea
+                    className="textarea-field"
+                    placeholder="تعليق العميل (AR)"
+                    value={testimonialComment}
+                    onChange={(e) => setTestimonialComment(e.target.value)}
+                    rows="4"
+                  />
+                  <textarea
+                    className="textarea-field"
+                    placeholder="Client Comment (EN)"
+                    value={testimonialCommentEn}
+                    onChange={(e) => setTestimonialCommentEn(e.target.value)}
+                    rows="4"
+                  />
+                  <div className="form-actions">
+                    <button 
+                      className="submit-button primary" 
+                      onClick={addTestimonial}
+                      disabled={isLoading}
+                    >
+                      <Save size={20} />
+                      {isLoading ? "جاري الإضافة..." : "إضافة رأي عميل"}
+                    </button>
+                    <button 
+                      className="submit-button secondary" 
+                      onClick={() => {
+                        setIsAddingTestimonial(false);
+                        setTestimonialName("");
+                        setTestimonialNameEn("");
+                        setTestimonialCompany("");
+                        setTestimonialCompanyEn("");
+                        setTestimonialPosition("");
+                        setTestimonialPositionEn("");
+                        setTestimonialComment("");
+                        setTestimonialCommentEn("");
+                        setTestimonialProject("");
+                        setTestimonialProjectEn("");
+                        setTestimonialImage("");
+                        setTestimonialRating(5);
+                        setTestimonialGradient("from-emerald-500 to-teal-500");
+                      }}
+                    >
+                      <X size={20} />
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Testimonials List */}
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Award size={24} />
+                  <span>آراء العملاء</span>
+                </div>
+              </div>
+              
+              {testimonials.length === 0 ? (
+                <div className="empty-state">
+                  <Award size={48} />
+                  <h3>لا توجد آراء عملاء حالياً</h3>
+                  <p>ابدأ بإضافة رأي عميل جديد</p>
+                </div>
+              ) : (
+                <div className="testimonials-grid">
+                  {testimonials.map((testimonial) => (
+                    <div key={testimonial.id} className="testimonial-card">
+                      <div className="testimonial-header">
+                        <div className="testimonial-avatar">
+                          {testimonial.image ? (
+                            <img src={testimonial.image} alt={testimonial.name} />
+                          ) : (
+                            <div className={`avatar-placeholder bg-gradient-to-r ${testimonial.gradient}`}>
+                              {testimonial.name ? testimonial.name.charAt(0) : '?'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="testimonial-info">
+                          <h4>{testimonial.name || testimonial.nameEn || 'عميل'}</h4>
+                          {testimonial.position && <p className="position">{testimonial.position}</p>}
+                          {testimonial.company && <p className="company">{testimonial.company}</p>}
+                        </div>
+                        <div className="testimonial-actions">
+                          <button 
+                            className="action-button delete"
+                            onClick={() => deleteTestimonial(testimonial.id)}
+                            title="حذف"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="testimonial-rating">
+                        {[...Array(testimonial.rating || 5)].map((_, i) => (
+                          <Star key={i} size={14} className="text-yellow-400 fill-current" />
+                        ))}
+                      </div>
+                      <div className="testimonial-comment">
+                        <p>{testimonial.comment || testimonial.commentEn || 'لا يوجد تعليق'}</p>
+                      </div>
+                      {testimonial.project && (
+                        <div className="testimonial-project">
+                          <span className={`project-badge bg-gradient-to-r ${testimonial.gradient}`}>
+                            {testimonial.project}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1161,20 +2113,67 @@ const Dashboard = () => {
                           <Award size={32} />
                         </div>
                       </div>
-                      
+                      {editingTeamId === member.id ? (
+                        <div className="project-content">
+                          <input className="input-field mb-2" type="text" value={editTeamData?.name || ''} onChange={(e)=> setEditTeamData({...editTeamData, name: e.target.value})} placeholder="اسم العضو (AR)" />
+                          <input className="input-field mb-2" type="text" value={editTeamData?.name_en || ''} onChange={(e)=> setEditTeamData({...editTeamData, name_en: e.target.value})} placeholder="Member Name (EN)" />
+                          <input className="input-field mb-2" type="text" value={editTeamData?.position || ''} onChange={(e)=> setEditTeamData({...editTeamData, position: e.target.value})} placeholder="المنصب (AR)" />
+                          <input className="input-field mb-2" type="text" value={editTeamData?.position_en || ''} onChange={(e)=> setEditTeamData({...editTeamData, position_en: e.target.value})} placeholder="Position (EN)" />
+                          <input className="input-field mb-2" type="url" value={editTeamData?.image || ''} onChange={(e)=> setEditTeamData({...editTeamData, image: e.target.value})} placeholder="رابط الصورة" />
+                          <textarea className="textarea-field mb-2" rows="3" value={editTeamData?.bio || ''} onChange={(e)=> setEditTeamData({...editTeamData, bio: e.target.value})} placeholder="نبذة (AR)" />
+                          <textarea className="textarea-field mb-2" rows="3" value={editTeamData?.bio_en || ''} onChange={(e)=> setEditTeamData({...editTeamData, bio_en: e.target.value})} placeholder="Bio (EN)" />
+                          <div className="project-actions mt-2">
+                            <button className="submit-button primary" onClick={async ()=>{
+                              try {
+                                setIsLoading(true);
+                                const ref = doc(db, 'team', editingTeamId);
+                                await updateDoc(ref, {
+                                  name: editTeamData.name,
+                                  name_en: editTeamData.name_en || editTeamData.name,
+                                  position: editTeamData.position,
+                                  position_en: editTeamData.position_en || editTeamData.position,
+                                  image: editTeamData.image,
+                                  bio: editTeamData.bio,
+                                  bio_en: editTeamData.bio_en || editTeamData.bio,
+                                });
+                                setEditingTeamId(null);
+                                setEditTeamData(null);
+                                fetchTeam();
+                              } catch(err) {
+                                alert('حدث خطأ أثناء حفظ العضو');
+                              } finally { setIsLoading(false); }
+                            }}>
+                              <Save size={16} /> حفظ
+                            </button>
+                            <button className="submit-button secondary" onClick={()=>{ setEditingTeamId(null); setEditTeamData(null); }}>
+                              <X size={16} /> إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
                       <div className="project-content">
                         <h3 className="project-title">{member.name}</h3>
                         <p className="project-description">{member.position}</p>
                         {member.bio && (
                           <p className="project-bio">{member.bio}</p>
                         )}
-                        
                         <div className="project-meta">
                           <span className="category-badge">عضو فريق</span>
                         </div>
                       </div>
-                      
                       <div className="project-actions">
+                            <button className="action-button edit" title="تعديل العضو" onClick={()=> { setEditingTeamId(member.id); setEditTeamData({
+                              name: member.name || '',
+                              name_en: member.name_en || member.name || '',
+                              position: member.position || '',
+                              position_en: member.position_en || member.position || '',
+                              image: member.image || '',
+                              bio: member.bio || '',
+                              bio_en: member.bio_en || member.bio || ''
+                            }); }}>
+                              <Edit size={16} />
+                            </button>
                         <button
                           onClick={() => deleteMember(member.id)}
                           className="action-button delete"
@@ -1183,6 +2182,8 @@ const Dashboard = () => {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1598,6 +2599,13 @@ const Dashboard = () => {
                     placeholder="Category Name (EN)"
                     value={newCategoryEn}
                     onChange={(e) => setNewCategoryEn(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="الرمز/الإيموجي (اختياري مثل: 🏢)"
+                    value={newCategoryEmoji}
+                    onChange={(e) => setNewCategoryEmoji(e.target.value)}
                   />
                 </div>
                 <div className="form-actions">
@@ -2034,7 +3042,760 @@ const Dashboard = () => {
             </div>
           </div>
         )}
+
+        {/* About Tab */}
+        {activeTab === 'about' && (
+          <div className="tab-content">
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Sparkles size={24} />
+                  <span>قسم من نحن</span>
       </div>
+              </div>
+              {aboutLoading ? (
+                <div className="loading-state"><div className="spinner"></div><p>جاري التحميل...</p></div>
+              ) : (
+                <form
+                  onSubmit={(e)=>{e.preventDefault(); saveAboutData();}}
+                  className="form-container"
+                >
+                  <div className="form-section">
+                    <h3 className="section-title">عربي</h3>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="العنوان" value={aboutData.ar.title}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, title:e.target.value}}))} />
+                    </div>
+                    <div className="input-field full-width">
+                      <label>المحتوى</label>
+                      <textarea className="textarea-field" rows="4" placeholder="النص" value={aboutData.ar.content}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, content:e.target.value}}))} />
+                    </div>
+                    {/* Story */}
+                    <div className="form-grid">
+                      <input className="input-field w-24" type="text" placeholder="أيقونة" value={aboutData.ar.story.icon}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, story:{...d.ar.story, icon:e.target.value}}}))} />
+                      <input className="input-field" type="text" placeholder="قصتنا" value={aboutData.ar.story.title}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, story:{...d.ar.story, title:e.target.value}}}))} />
+                    </div>
+                    <div className="input-field full-width">
+                      <textarea className="textarea-field" rows="3" placeholder="وصف القصة" value={aboutData.ar.story.description}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, story:{...d.ar.story, description:e.target.value}}}))} />
+                    </div>
+                    {/* Vision & Mission */}
+                    <div className="form-grid">
+                      <input className="input-field w-24" type="text" placeholder="🎯" value={aboutData.ar.visionMission.icon}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, visionMission:{...d.ar.visionMission, icon:e.target.value}}}))} />
+                      <input className="input-field" type="text" placeholder="رؤيتنا ورسالتنا" value={aboutData.ar.visionMission.title}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, visionMission:{...d.ar.visionMission, title:e.target.value}}}))} />
+                    </div>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="الرؤية" value={aboutData.ar.visionMission.vision.title}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, visionMission:{...d.ar.visionMission, vision:{...d.ar.visionMission.vision, title:e.target.value}}}}))} />
+                      <textarea className="input-field" rows="2" placeholder="نص الرؤية" value={aboutData.ar.visionMission.vision.description}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, visionMission:{...d.ar.visionMission, vision:{...d.ar.visionMission.vision, description:e.target.value}}}}))} />
+                    </div>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="الرسالة" value={aboutData.ar.visionMission.mission.title}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, visionMission:{...d.ar.visionMission, mission:{...d.ar.visionMission.mission, title:e.target.value}}}}))} />
+                      <textarea className="input-field" rows="2" placeholder="نص الرسالة" value={aboutData.ar.visionMission.mission.description}
+                        onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, visionMission:{...d.ar.visionMission, mission:{...d.ar.visionMission.mission, description:e.target.value}}}}))} />
+                    </div>
+                    {/* Values */}
+                    <div className="input-field full-width">
+                      <label>قيمنا الأساسية</label>
+                      {aboutData.ar.values.map((val, i)=> (
+                        <div key={i} className="flex items-center gap-2 mb-2">
+                          <input className="input-field w-20" type="text" value={val.icon} onChange={(e)=>{
+                            const values=[...aboutData.ar.values]; values[i]={...values[i], icon:e.target.value};
+                            setAboutData(d=>({...d, ar:{...d.ar, values}}));
+                          }} />
+                          <input className="input-field" type="text" value={val.title} placeholder="العنوان" onChange={(e)=>{
+                            const values=[...aboutData.ar.values]; values[i]={...values[i], title:e.target.value};
+                            setAboutData(d=>({...d, ar:{...d.ar, values}}));
+                          }} />
+                          <input className="input-field" type="text" value={val.description} placeholder="الوصف" onChange={(e)=>{
+                            const values=[...aboutData.ar.values]; values[i]={...values[i], description:e.target.value};
+                            setAboutData(d=>({...d, ar:{...d.ar, values}}));
+                          }} />
+                          <button type="button" className="action-button delete" onClick={()=>{
+                            setAboutData(d=>({...d, ar:{...d.ar, values:d.ar.values.filter((_,idx)=> idx!==i)}}));
+                          }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" className="submit-button secondary" onClick={()=>{
+                        setAboutData(d=>({...d, ar:{...d.ar, values:[...d.ar.values, { icon:'✨', title:'', description:''}]}}));
+                      }}>
+                        <Plus size={16} /> إضافة قيمة
+                      </button>
+                    </div>
+                    {/* Stats */}
+                    <div className="form-grid">
+                      <div className="input-field">
+                        <label>عدد السنوات</label>
+                        <input className="input-field" type="text" value={aboutData.ar.stats.years} onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, stats:{...d.ar.stats, years:e.target.value}}}))} />
+                      </div>
+                      <div className="input-field">
+                        <label>عدد المشاريع</label>
+                        <input className="input-field" type="text" value={aboutData.ar.stats.projects} onChange={(e)=>setAboutData(d=>({...d, ar:{...d.ar, stats:{...d.ar.stats, projects:e.target.value}}}))} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="form-section">
+                    <h3 className="section-title">English</h3>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="Title" value={aboutData.en.title}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, title:e.target.value}}))} />
+                    </div>
+                    <div className="input-field full-width">
+                      <label>Content</label>
+                      <textarea className="textarea-field" rows="4" placeholder="Content" value={aboutData.en.content}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, content:e.target.value}}))} />
+                    </div>
+                    {/* Story */}
+                    <div className="form-grid">
+                      <input className="input-field w-24" type="text" placeholder="Icon" value={aboutData.en.story.icon}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, story:{...d.en.story, icon:e.target.value}}}))} />
+                      <input className="input-field" type="text" placeholder="Our Story" value={aboutData.en.story.title}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, story:{...d.en.story, title:e.target.value}}}))} />
+                    </div>
+                    <div className="input-field full-width">
+                      <textarea className="textarea-field" rows="3" placeholder="Story description" value={aboutData.en.story.description}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, story:{...d.en.story, description:e.target.value}}}))} />
+                    </div>
+                    {/* Vision & Mission */}
+                    <div className="form-grid">
+                      <input className="input-field w-24" type="text" placeholder="🎯" value={aboutData.en.visionMission.icon}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, visionMission:{...d.en.visionMission, icon:e.target.value}}}))} />
+                      <input className="input-field" type="text" placeholder="Vision & Mission" value={aboutData.en.visionMission.title}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, visionMission:{...d.en.visionMission, title:e.target.value}}}))} />
+                    </div>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="Vision" value={aboutData.en.visionMission.vision.title}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, visionMission:{...d.en.visionMission, vision:{...d.en.visionMission.vision, title:e.target.value}}}}))} />
+                      <textarea className="input-field" rows="2" placeholder="Vision text" value={aboutData.en.visionMission.vision.description}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, visionMission:{...d.en.visionMission, vision:{...d.en.visionMission.vision, description:e.target.value}}}}))} />
+                    </div>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="Mission" value={aboutData.en.visionMission.mission.title}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, visionMission:{...d.en.visionMission, mission:{...d.en.visionMission.mission, title:e.target.value}}}}))} />
+                      <textarea className="input-field" rows="2" placeholder="Mission text" value={aboutData.en.visionMission.mission.description}
+                        onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, visionMission:{...d.en.visionMission, mission:{...d.en.visionMission.mission, description:e.target.value}}}}))} />
+                    </div>
+                    {/* Values */}
+                    <div className="input-field full-width">
+                      <label>Core Values</label>
+                      {aboutData.en.values.map((val, i)=> (
+                        <div key={i} className="flex items-center gap-2 mb-2">
+                          <input className="input-field w-20" type="text" value={val.icon} onChange={(e)=>{
+                            const values=[...aboutData.en.values]; values[i]={...values[i], icon:e.target.value};
+                            setAboutData(d=>({...d, en:{...d.en, values}}));
+                          }} />
+                          <input className="input-field" type="text" value={val.title} placeholder="Title" onChange={(e)=>{
+                            const values=[...aboutData.en.values]; values[i]={...values[i], title:e.target.value};
+                            setAboutData(d=>({...d, en:{...d.en, values}}));
+                          }} />
+                          <input className="input-field" type="text" value={val.description} placeholder="Description" onChange={(e)=>{
+                            const values=[...aboutData.en.values]; values[i]={...values[i], description:e.target.value};
+                            setAboutData(d=>({...d, en:{...d.en, values}}));
+                          }} />
+                          <button type="button" className="action-button delete" onClick={()=>{
+                            setAboutData(d=>({...d, en:{...d.en, values:d.en.values.filter((_,idx)=> idx!==i)}}));
+                          }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" className="submit-button secondary" onClick={()=>{
+                        setAboutData(d=>({...d, en:{...d.en, values:[...d.en.values, { icon:'✨', title:'', description:''}]}}));
+                      }}>
+                        <Plus size={16} /> Add Value
+                      </button>
+                    </div>
+                    {/* Stats */}
+                    <div className="form-grid">
+                      <div className="input-field">
+                        <label>Years</label>
+                        <input className="input-field" type="text" value={aboutData.en.stats.years} onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, stats:{...d.en.stats, years:e.target.value}}}))} />
+                      </div>
+                      <div className="input-field">
+                        <label>Projects</label>
+                        <input className="input-field" type="text" value={aboutData.en.stats.projects} onChange={(e)=>setAboutData(d=>({...d, en:{...d.en, stats:{...d.en.stats, projects:e.target.value}}}))} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="form-actions">
+                    <button type="submit" className="submit-button primary" disabled={aboutSaving}>
+                      <Save size={18} />
+                      {aboutSaving ? 'جاري الحفظ...' : 'حفظ من نحن'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Why Choose Us Tab */}
+        {activeTab === 'why' && (
+          <div className="tab-content">
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Star size={24} />
+                  <span>قسم لماذا تختارنا؟</span>
+                </div>
+              </div>
+              {whyLoading ? (
+                <div className="loading-state"><div className="spinner"></div><p>جاري التحميل...</p></div>
+              ) : (
+                <form
+                  onSubmit={(e)=>{e.preventDefault(); saveWhyData();}}
+                  className="form-container"
+                >
+                  <div className="form-section">
+                    <h3 className="section-title">عربي</h3>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="العنوان" value={whyData.ar.title}
+                        onChange={(e)=>setWhyData(d=>({...d, ar:{...d.ar, title:e.target.value}}))} />
+                    </div>
+                    <div className="input-field full-width">
+                      <label>العناصر</label>
+                      {whyData.ar.items.map((it, i)=> (
+                        <div key={i} className="flex items-center gap-2 mb-2">
+                          <input className="input-field w-20" type="text" placeholder="Icon" value={it.icon}
+                            onChange={(e)=>{
+                              const items=[...whyData.ar.items]; items[i]={...items[i], icon:e.target.value};
+                              setWhyData(d=>({...d, ar:{...d.ar, items}}));
+                            }} />
+                          <input className="input-field" type="text" placeholder="العنوان" value={it.title}
+                            onChange={(e)=>{
+                              const items=[...whyData.ar.items]; items[i]={...items[i], title:e.target.value};
+                              setWhyData(d=>({...d, ar:{...d.ar, items}}));
+                            }} />
+                          <input className="input-field" type="text" placeholder="الوصف" value={it.description}
+                            onChange={(e)=>{
+                              const items=[...whyData.ar.items]; items[i]={...items[i], description:e.target.value};
+                              setWhyData(d=>({...d, ar:{...d.ar, items}}));
+                            }} />
+                          <button type="button" className="action-button delete" onClick={()=>{
+                            setWhyData(d=>({...d, ar:{...d.ar, items:d.ar.items.filter((_,idx)=> idx!==i)}}));
+                          }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" className="submit-button secondary" onClick={()=>{
+                        setWhyData(d=>({...d, ar:{...d.ar, items:[...d.ar.items, { icon:'✅', title:'', description:''}]}}));
+                      }}>
+                        <Plus size={16} /> إضافة عنصر
+                      </button>
+                    </div>
+                  </div>
+                  <div className="form-section">
+                    <h3 className="section-title">English</h3>
+                    <div className="form-grid">
+                      <input className="input-field" type="text" placeholder="Title" value={whyData.en.title}
+                        onChange={(e)=>setWhyData(d=>({...d, en:{...d.en, title:e.target.value}}))} />
+                    </div>
+                    <div className="input-field full-width">
+                      <label>Items</label>
+                      {whyData.en.items.map((it, i)=> (
+                        <div key={i} className="flex items-center gap-2 mb-2">
+                          <input className="input-field w-20" type="text" placeholder="Icon" value={it.icon}
+                            onChange={(e)=>{
+                              const items=[...whyData.en.items]; items[i]={...items[i], icon:e.target.value};
+                              setWhyData(d=>({...d, en:{...d.en, items}}));
+                            }} />
+                          <input className="input-field" type="text" placeholder="Title" value={it.title}
+                            onChange={(e)=>{
+                              const items=[...whyData.en.items]; items[i]={...items[i], title:e.target.value};
+                              setWhyData(d=>({...d, en:{...d.en, items}}));
+                            }} />
+                          <input className="input-field" type="text" placeholder="Description" value={it.description}
+                            onChange={(e)=>{
+                              const items=[...whyData.en.items]; items[i]={...items[i], description:e.target.value};
+                              setWhyData(d=>({...d, en:{...d.en, items}}));
+                            }} />
+                          <button type="button" className="action-button delete" onClick={()=>{
+                            setWhyData(d=>({...d, en:{...d.en, items:d.en.items.filter((_,idx)=> idx!==i)}}));
+                          }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button type="button" className="submit-button secondary" onClick={()=>{
+                        setWhyData(d=>({...d, en:{...d.en, items:[...d.en.items, { icon:'✅', title:'', description:''}]}}));
+                      }}>
+                        <Plus size={16} /> Add Item
+                      </button>
+                    </div>
+                  </div>
+                  <div className="form-actions">
+                    <button type="submit" className="submit-button primary" disabled={whySaving}>
+                      <Save size={18} />
+                      {whySaving ? 'جاري الحفظ...' : 'حفظ لماذا تختارنا'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Visibility Tab */}
+        {activeTab === 'visibility' && (
+          <div className="tab-content">
+            <div className="content-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <Eye size={24} />
+                  <span>إعدادات ظهور الأقسام</span>
+                </div>
+              </div>
+              <div className="form-container">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: 'hero', label: 'البانر' },
+                    { key: 'projects', label: 'المشاريع' },
+                    { key: 'services', label: 'الخدمات' },
+                    { key: 'team', label: 'الفريق' },
+                    { key: 'clients', label: 'العملاء' },
+                    { key: 'categories', label: 'التصنيفات' },
+                    { key: 'contact', label: 'التواصل' },
+                    { key: 'stats', label: 'الإحصائيات' }
+                  ].map(item => (
+                    <label key={item.key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <span className="font-medium">{item.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={!!visibility[item.key]}
+                        onChange={(e) => setVisibility(v => ({ ...v, [item.key]: e.target.checked }))}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div className="form-actions mt-4">
+                  <button className="submit-button primary" onClick={saveVisibility} disabled={savingVisibility}>
+                    <Save size={18} />
+                    {savingVisibility ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* Modal for project details */}
+      {projectDetailsId && (() => {
+  const p = projects.find(pr => pr.id === projectDetailsId);
+  if (!p) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setProjectDetailsId(null)}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+              {p.title ? p.title.charAt(0) : '?'}
+            </div>
+            <div>
+              <h2 className="text-lg md:text-2xl font-bold text-gray-800">{p.title}</h2>
+              <div className="text-sm md:text-base text-gray-600">{p.title_en}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="inline-block px-2 py-1 bg-emerald-500 text-xs text-white rounded-full">{getCategoryDisplayName(p.category)}</span>
+                <span className="text-xs text-gray-500">({p.year})</span>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setProjectDetailsId(null)} 
+            className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <X size={16} className="md:w-5 md:h-5" />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {/* Description */}
+          {(p.description || p.description_en) && (
+            <div className="mb-6">
+              <h3 className="text-base md:text-lg font-semibold mb-2 text-gray-800">الوصف</h3>
+              {p.description && (
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-2">{p.description}</p>
+              )}
+              {p.description_en && (
+                <p className="text-sm md:text-base text-gray-500 leading-relaxed italic">{p.description_en}</p>
+              )}
+            </div>
+          )}
+
+          {/* Images Slider */}
+          {p.images && p.images.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-base md:text-lg font-semibold mb-4 text-gray-800">صور المشروع ({p.images.length})</h3>
+              <div className="relative">
+                <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+                  {p.images.filter(img => img && img.url).map((img, i) => (
+                    <div key={i} className="flex-shrink-0 w-64 md:w-80">
+                      <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+                        <img 
+                          src={img.url} 
+                          alt={`${p.title} - صورة ${i + 1}`}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 hidden">
+                          <div className="text-center">
+                            <div className="text-3xl mb-2">🖼️</div>
+                            <p className="text-sm">فشل في تحميل الصورة</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-center">
+                        <span className="text-xs text-gray-500">
+                          {img.isPrimary ? '⭐ رئيسية' : `صورة ${i + 1}`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Project Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="font-semibold mb-3 text-gray-800">معلومات المشروع</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">التصنيف:</span>
+                  <span className="font-medium">{getCategoryDisplayName(p.category)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">السنة:</span>
+                  <span className="font-medium">{p.year || 'غير محدد'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">مميز:</span>
+                  <span className="font-medium">{p.featured ? 'نعم' : 'لا'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">مرئي:</span>
+                  <span className="font-medium">{p.isVisible !== false ? 'نعم' : 'لا'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="font-semibold mb-3 text-gray-800">إحصائيات</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">عدد الصور:</span>
+                  <span className="font-medium">{p.images ? p.images.length : 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">تاريخ الإنشاء:</span>
+                  <span className="font-medium">
+                    {p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString('ar-SA') : 'غير محدد'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">آخر تحديث:</span>
+                  <span className="font-medium">
+                    {p.updatedAt ? new Date(p.updatedAt.seconds * 1000).toLocaleDateString('ar-SA') : 'غير محدد'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between p-4 md:p-6 border-t border-gray-200 bg-gray-50">
+          <div className="text-xs md:text-sm text-gray-500">
+            تفاصيل المشروع - اضغط خارج النافذة للإغلاق
+          </div>
+          <button 
+            onClick={() => setProjectDetailsId(null)}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm md:text-base"
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+})()}
+      
+      {/* Preview Modal */}
+      {previewModalOpen && previewProject && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                  {previewProject.title ? previewProject.title.charAt(0) : '?'}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">{previewProject.title || 'بدون عنوان'}</h2>
+                  {previewProject.title_en && (
+                    <p className="text-gray-600">{previewProject.title_en}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">
+                      {getCategoryDisplayName(previewProject.category)}
+                    </span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                      {previewProject.year || 'بدون سنة'}
+                    </span>
+                    {previewProject.featured && (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                        ⭐ مميز
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={closeProjectPreview}
+                className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Description */}
+              {previewProject.description && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">الوصف</h3>
+                  <p className="text-gray-600 leading-relaxed">{previewProject.description}</p>
+                  {previewProject.description_en && (
+                    <p className="text-gray-600 leading-relaxed mt-2 italic">{previewProject.description_en}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Images Slider */}
+              {previewProject.images && previewProject.images.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">صور المشروع ({previewProject.images.length})</h3>
+                  <div className="relative">
+                    <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+                      {previewProject.images.map((image, index) => (
+                        <div key={index} className="flex-shrink-0 w-64 md:w-80">
+                          <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+                            <img 
+                              src={image.url} 
+                              alt={`${previewProject.title} - صورة ${index + 1}`}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 hidden">
+                              <div className="text-center">
+                                <div className="text-3xl mb-2">🖼️</div>
+                                <p className="text-sm">فشل في تحميل الصورة</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-center">
+                            <span className="text-xs text-gray-500">
+                              {image.isPrimary ? '⭐ رئيسية' : `صورة ${index + 1}`}
+                            </span>
+                            {image.alt && (
+                              <p className="text-xs text-gray-400 mt-1">{image.alt}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Info */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="font-semibold mb-3 text-gray-800">معلومات أساسية</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">التصنيف:</span>
+                      <span className="font-medium">{getCategoryDisplayName(previewProject.category)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">السنة:</span>
+                      <span className="font-medium">{previewProject.year || 'غير محدد'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">مميز:</span>
+                      <span className="font-medium">{previewProject.featured ? 'نعم' : 'لا'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">مرئي:</span>
+                      <span className="font-medium">{previewProject.isVisible !== false ? 'نعم' : 'لا'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Technical Info */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="font-semibold mb-3 text-gray-800">معلومات تقنية</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">عدد الصور:</span>
+                      <span className="font-medium">{previewProject.images ? previewProject.images.length : 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">تاريخ الإنشاء:</span>
+                      <span className="font-medium">
+                        {previewProject.createdAt ? new Date(previewProject.createdAt.seconds * 1000).toLocaleDateString('ar-SA') : 'غير محدد'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">آخر تحديث:</span>
+                      <span className="font-medium">
+                        {previewProject.updatedAt ? new Date(previewProject.updatedAt.seconds * 1000).toLocaleDateString('ar-SA') : 'غير محدد'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <div className="text-sm text-gray-500">
+                معاينة المشروع - يمكنك تعديل المشروع من قائمة المشاريع
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    closeProjectPreview();
+                    setActiveTab('projects');
+                    openEditProject(previewProject);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  <Edit size={16} className="inline ml-1" />
+                  تعديل
+                </button>
+                <button 
+                  onClick={closeProjectPreview}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {imagePreviewOpen && previewImage && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={closeImagePreview}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+            {/* Close Button */}
+            <button 
+              onClick={closeImagePreview}
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Image Container */}
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
+              {/* Image */}
+              <div className="relative">
+                <img 
+                  src={previewImage.url} 
+                  alt="معاينة الصورة"
+                  className="w-full h-auto max-h-[70vh] object-contain"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div className="w-full h-64 bg-gray-200 flex items-center justify-center text-gray-500 hidden">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">🖼️</div>
+                    <p className="text-lg">فشل في تحميل الصورة</p>
+                    <p className="text-sm text-gray-400 mt-2">تأكد من صحة رابط الصورة</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Info */}
+              <div className="p-6 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">معلومات الصورة</h3>
+                    <div className="mt-2 space-y-1 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">الرابط:</span>
+                        <span className="text-xs bg-gray-200 px-2 py-1 rounded truncate max-w-xs">
+                          {previewImage.url}
+                        </span>
+                      </div>
+                      {previewImage.isPrimary && (
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                            ⭐ صورة رئيسية
+                          </span>
+                        </div>
+                      )}
+                      {previewImage.alt && (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">الوصف:</span>
+                          <span>{previewImage.alt}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(previewImage.url);
+                        alert('تم نسخ رابط الصورة');
+                      }}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                    >
+                      نسخ الرابط
+                    </button>
+                    <button 
+                      onClick={closeImagePreview}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+                    >
+                      إغلاق
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Hint */}
+            <div className="text-center mt-4 text-white/70 text-sm">
+              اضغط خارج النافذة أو على زر الإغلاق لإغلاق المعاينة
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

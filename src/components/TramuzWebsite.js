@@ -26,6 +26,8 @@ const TramuzWebsite = () => {
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [firebaseServices, setFirebaseServices] = useState([]);
   // const [isLoadingServices, setIsLoadingServices] = useState(false);
+  const [firebaseTestimonials, setFirebaseTestimonials] = useState([]);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(false);
   const [firebaseTeam, setFirebaseTeam] = useState([]);
   const [isLoadingTeam, setIsLoadingTeam] = useState(false);
   const [firebaseContactInfo, setFirebaseContactInfo] = useState({
@@ -41,7 +43,6 @@ const TramuzWebsite = () => {
   });
   const [isLoadingContact, setIsLoadingContact] = useState(false);
   const [firebaseCategories, setFirebaseCategories] = useState([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -50,6 +51,23 @@ const TramuzWebsite = () => {
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [heroData, setHeroData] = useState(null);
   const [heroLoading, setHeroLoading] = useState(true);
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  // Site visibility and CMS content
+  const [siteVisibility, setSiteVisibility] = useState({
+    hero: true,
+    projects: true,
+    services: true,
+    testimonials: true,
+    team: true,
+    clients: true,
+    categories: true,
+    contact: true,
+    stats: true,
+    about: true,
+    why: true
+  });
+  const [aboutData, setAboutData] = useState(null);
+  const [whyData, setWhyData] = useState(null);
 
   // Translation function
   const t = (key) => {
@@ -134,7 +152,6 @@ const TramuzWebsite = () => {
   // تحميل التصنيفات من Firebase
   const fetchCategoriesFromFirebase = async () => {
     try {
-      setIsLoadingCategories(true);
       const querySnapshot = await getDocs(collection(db, "categories"));
       const categoriesList = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -143,8 +160,6 @@ const TramuzWebsite = () => {
       setFirebaseCategories(categoriesList);
     } catch (error) {
       console.error("خطأ في تحميل التصنيفات من Firebase: ", error);
-    } finally {
-      setIsLoadingCategories(false);
     }
   };
 
@@ -163,6 +178,41 @@ const TramuzWebsite = () => {
     } finally {
       setIsLoadingClients(false);
     }
+  };
+
+  // تحميل آراء العملاء من Firebase
+  const fetchTestimonialsFromFirebase = async () => {
+    setIsLoadingTestimonials(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "testimonials"));
+      const testimonialsList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFirebaseTestimonials(testimonialsList);
+    } catch (error) {
+      console.error("خطأ في تحميل آراء العملاء من Firebase: ", error);
+    } finally {
+      setIsLoadingTestimonials(false);
+    }
+  };
+
+  // دالة لتحويل آراء العملاء من Firebase إلى تنسيق مناسب للعرض
+  const getDisplayTestimonials = () => {
+    if (firebaseTestimonials.length === 0) return [];
+    
+    return firebaseTestimonials.map(testimonial => ({
+      id: testimonial.id,
+      name: testimonial.name || testimonial.nameAr,
+      company: testimonial.company || testimonial.companyAr,
+      position: testimonial.position || testimonial.positionAr,
+      image: testimonial.image || testimonial.imageUrl,
+      comment: testimonial.comment || testimonial.commentAr,
+      project: testimonial.project || testimonial.projectAr,
+      gradient: testimonial.gradient || "from-emerald-500 to-teal-500",
+      rating: testimonial.rating || 5,
+      isVisible: testimonial.isVisible !== false
+    })).filter(testimonial => testimonial.isVisible);
   };
 
   // دالة لتحويل بيانات Firebase إلى تنسيق مناسب للعرض
@@ -231,7 +281,7 @@ const TramuzWebsite = () => {
   // دالة لتحويل خدمات Firebase إلى تنسيق مناسب للعرض
   const getDisplayServices = () => {
     // استخدام الخدمات من Firebase فقط (إلغاء الخدمات الثابتة)
-    return firebaseServices.map(service => ({
+    const mapped = firebaseServices.map(service => ({
       id: `firebase-${service.id}`,
       title: language === 'en' ? (service.title_en || service.title) : service.title,
       description: language === 'en' ? (service.description_en || service.description) : service.description,
@@ -245,8 +295,16 @@ const TramuzWebsite = () => {
       features: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
       process: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
       examples: [language === 'en' ? (service.description_en || service.description) : service.description], // تحويل إلى مصفوفة
-      isFirebase: true
+      isFirebase: true,
+      featured: !!service.featured,
+      order: service.order ?? 0
     }));
+    // ترتيب: المميزة أولاً ثم حسب order ثم بالعنوان
+    return mapped.sort((a, b) => {
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
+      if (a.order !== b.order) return a.order - b.order;
+      return (a.title || '').localeCompare(b.title || '');
+    });
   };
 
   useEffect(() => {
@@ -265,6 +323,31 @@ const TramuzWebsite = () => {
     fetchContactInfoFromFirebase();
     fetchCategoriesFromFirebase();
     fetchClientsFromFirebase();
+    fetchTestimonialsFromFirebase();
+    // Visibility & CMS content
+    (async () => {
+      try {
+        const visRef = doc(db, 'settings', 'visibility');
+        const visSnap = await getDoc(visRef);
+        if (visSnap.exists()) setSiteVisibility(v => ({ ...v, ...visSnap.data() }));
+      } catch (e) {
+        console.error('خطأ في تحميل إعدادات الظهور:', e);
+      }
+      try {
+        const aboutRef = doc(db, 'settings', 'about');
+        const aboutSnap = await getDoc(aboutRef);
+        if (aboutSnap.exists()) setAboutData(aboutSnap.data());
+      } catch (e) {
+        console.error('خطأ في تحميل من نحن:', e);
+      }
+      try {
+        const whyRef = doc(db, 'settings', 'whyChoose');
+        const whySnap = await getDoc(whyRef);
+        if (whySnap.exists()) setWhyData(whySnap.data());
+      } catch (e) {
+        console.error('خطأ في تحميل لماذا تختارنا:', e);
+      }
+    })();
   }, []);
 
   // تحميل بيانات البانر من Firestore
@@ -450,6 +533,8 @@ ${t('contact.whatsappThanks')}`;
     { id: 'testimonials', label: t('success.badge'), icon: <Award size={18} /> },
     { id: 'contact', label: t('navigation.contact'), icon: <Phone size={18} /> }
   ];
+
+
 
   return (
     <div className="min-h-screen bg-slate-50" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -692,11 +777,11 @@ ${t('contact.whatsappThanks')}`;
               🏢 {t('about.badge')}
             </div>
             <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
-                {t('about.title')}
+                {aboutData ? (language === 'en' ? (aboutData.en?.title || t('about.title')) : (aboutData.ar?.title || t('about.title'))) : t('about.title')}
             </h2>
             <div className="w-32 h-2 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-8"></div>
             <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
-              {t('about.description')}
+              {aboutData ? (language === 'en' ? (aboutData.en?.content || t('about.description')) : (aboutData.ar?.content || t('about.description'))) : t('about.description')}
                   </p>
                 </div>
                 
@@ -709,12 +794,12 @@ ${t('contact.whatsappThanks')}`;
                 <div className="relative z-10">
                   <div className="flex items-center mb-6">
                     <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center text-2xl ml-4">
-                      🏢
+                      {aboutData ? (language === 'en' ? (aboutData.en?.story?.icon || '🏢') : (aboutData.ar?.story?.icon || '🏢')) : '🏢'}
                     </div>
-                    <h3 className="text-2xl font-black text-slate-800">{t('about.story.title')}</h3>
+                    <h3 className="text-2xl font-black text-slate-800">{aboutData ? (language === 'en' ? (aboutData.en?.story?.title || t('about.story.title')) : (aboutData.ar?.story?.title || t('about.story.title'))) : t('about.story.title')}</h3>
                   </div>
                   <p className="text-lg text-slate-700 leading-relaxed">
-                    {t('about.story.description')}
+                    {aboutData ? (language === 'en' ? (aboutData.en?.story?.description || t('about.story.description')) : (aboutData.ar?.story?.description || t('about.story.description'))) : t('about.story.description')}
                   </p>
                 </div>
                 </div>
@@ -724,18 +809,18 @@ ${t('contact.whatsappThanks')}`;
                 <div className="relative z-10">
                   <div className="flex items-center mb-6">
                     <div className="w-16 h-16 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center text-2xl ml-4">
-                      🎯
+                      {aboutData ? (language === 'en' ? (aboutData.en?.visionMission?.icon || '🎯') : (aboutData.ar?.visionMission?.icon || '🎯')) : '🎯'}
                 </div>
-                    <h3 className="text-2xl font-black text-slate-800">{t('about.visionMission.title')}</h3>
+                    <h3 className="text-2xl font-black text-slate-800">{aboutData ? (language === 'en' ? (aboutData.en?.visionMission?.title || t('about.visionMission.title')) : (aboutData.ar?.visionMission?.title || t('about.visionMission.title'))) : t('about.visionMission.title')}</h3>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-lg font-bold text-emerald-600 mb-2">{t('about.visionMission.vision.title')}</h4>
-                      <p className="text-slate-700">{t('about.visionMission.vision.description')}</p>
+                      <h4 className="text-lg font-bold text-emerald-600 mb-2">{aboutData ? (language === 'en' ? (aboutData.en?.visionMission?.vision?.title || t('about.visionMission.vision.title')) : (aboutData.ar?.visionMission?.vision?.title || t('about.visionMission.vision.title'))) : t('about.visionMission.vision.title')}</h4>
+                      <p className="text-slate-700">{aboutData ? (language === 'en' ? (aboutData.en?.visionMission?.vision?.description || t('about.visionMission.vision.description')) : (aboutData.ar?.visionMission?.vision?.description || t('about.visionMission.vision.description'))) : t('about.visionMission.vision.description')}</p>
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-teal-600 mb-2">{t('about.visionMission.mission.title')}</h4>
-                      <p className="text-slate-700">{t('about.visionMission.mission.description')}</p>
+                      <h4 className="text-lg font-bold text-teal-600 mb-2">{aboutData ? (language === 'en' ? (aboutData.en?.visionMission?.mission?.title || t('about.visionMission.mission.title')) : (aboutData.ar?.visionMission?.mission?.title || t('about.visionMission.mission.title'))) : t('about.visionMission.mission.title')}</h4>
+                      <p className="text-slate-700">{aboutData ? (language === 'en' ? (aboutData.en?.visionMission?.mission?.description || t('about.visionMission.mission.description')) : (aboutData.ar?.visionMission?.mission?.description || t('about.visionMission.mission.description'))) : t('about.visionMission.mission.description')}</p>
                     </div>
                   </div>
                 </div>
@@ -755,7 +840,7 @@ ${t('contact.whatsappThanks')}`;
                   </div>
                   
                   <div className="grid grid-cols-1 gap-6">
-                    {t('about.values.items').map((value, index) => (
+                    {(aboutData ? (language === 'en' ? (aboutData.en?.values || []) : (aboutData.ar?.values || [])) : t('about.values.items')).map((value, index) => (
                       <div key={index} className="flex items-center space-x-reverse space-x-4 p-4 bg-slate-100/60 rounded-2xl hover:bg-slate-100/80 transition-all duration-300">
                         <div className="text-2xl">{value.icon}</div>
                         <div className="flex-1">
@@ -771,44 +856,33 @@ ${t('contact.whatsappThanks')}`;
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-6 text-center text-white">
-                  <div className="text-3xl font-black mb-2">15+</div>
-                  <div className="text-sm font-medium">سنة خبرة</div>
+                  <div className="text-3xl font-black mb-2">{aboutData ? (language === 'en' ? (aboutData.en?.stats?.years || '15+') : (aboutData.ar?.stats?.years || '15+')) : '15+'}</div>
+                  <div className="text-sm font-medium">{language === 'en' ? 'Years of Experience' : 'سنة خبرة'}</div>
                 </div>
                 <div className="bg-gradient-to-r from-teal-500 to-cyan-500 rounded-2xl p-6 text-center text-white">
-                  <div className="text-3xl font-black mb-2">100+</div>
-                  <div className="text-sm font-medium">مشروع مكتمل</div>
+                  <div className="text-3xl font-black mb-2">{aboutData ? (language === 'en' ? (aboutData.en?.stats?.projects || '100+') : (aboutData.ar?.stats?.projects || '100+')) : '100+'}</div>
+                  <div className="text-sm font-medium">{language === 'en' ? 'Completed Projects' : 'مشروع مكتمل'}</div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Why Choose Us */}
+          {siteVisibility.why !== false && (
           <div className="text-center">
-            <h3 className="text-3xl font-black text-slate-800 mb-12">{t('about.whyChooseUs.title')}</h3>
+              <h3 className="text-3xl font-black text-slate-800 mb-12">{whyData ? (language === 'en' ? (whyData.en?.title || t('about.whyChooseUs.title')) : (whyData.ar?.title || t('about.whyChooseUs.title'))) : t('about.whyChooseUs.title')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: "🎨",
-                  title: t('about.whyChooseUs.features.0.title'),
-                  description: t('about.whyChooseUs.features.0.description')
-                },
-                {
-                  icon: "⚡",
-                  title: t('about.whyChooseUs.features.1.title'),
-                  description: t('about.whyChooseUs.features.1.description')
-                },
-                {
-                  icon: "🤝",
-                  title: t('about.whyChooseUs.features.2.title'),
-                  description: t('about.whyChooseUs.features.2.description')
-                }
-              ].map((feature, index) => (
+                {(whyData ? (language === 'en' ? (whyData.en?.items || []) : (whyData.ar?.items || [])) : [
+                  { icon: '🎨', title: t('about.whyChooseUs.features.0.title'), description: t('about.whyChooseUs.features.0.description') },
+                  { icon: '⚡', title: t('about.whyChooseUs.features.1.title'), description: t('about.whyChooseUs.features.1.description') },
+                  { icon: '🤝', title: t('about.whyChooseUs.features.2.title'), description: t('about.whyChooseUs.features.2.description') },
+                ]).map((feature, index) => (
                 <div
                   key={index}
                   className="group bg-slate-50/80 backdrop-blur-lg rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-500 border border-slate-200/50 hover:border-slate-300/50 transform hover:-translate-y-2 hover:scale-105"
                 >
                   <div className="text-4xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                    {feature.icon}
+                      {feature.icon || '✨'}
                   </div>
                   <h4 className="text-xl font-black text-slate-800 mb-4 group-hover:text-emerald-700 transition-colors duration-300">
                     {feature.title}
@@ -820,98 +894,102 @@ ${t('contact.whatsappThanks')}`;
               ))}
             </div>
           </div>
+          )}
         </div>
       </section>
 
       {/* Services Section */}
-      <section id="services" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center mb-24">
-            <div className="inline-block px-6 py-3 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm mb-8">
+      <section id="services" className="py-16 md:py-20 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center mb-12 md:mb-16">
+            <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-xs md:text-sm mb-4 md:mb-6">
               ✨ {t('services.title')}
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-8">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 mb-4 md:mb-6">
                 {t('services.title')}
             </h2>
-            <div className="w-32 h-2 bg-emerald-600 rounded-full mx-auto mb-8"></div>
-            <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+            <div className="w-24 h-1 bg-emerald-600 rounded-full mx-auto mb-4 md:mb-6"></div>
+            <p className="text-base md:text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed px-4">
               {t('services.subtitle')}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
             {getDisplayServices().map((service, index) => (
               <div
                 key={index}
-                className="group relative bg-slate-50 rounded-3xl p-10 shadow-xl hover:shadow-lg transition-all duration-200 border border-slate-200 transform hover:-translate-y-1 overflow-hidden"
+                className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 transform hover:-translate-y-2 overflow-hidden"
               >
                 {/* Background Gradient */}
-                <div className="absolute inset-0 bg-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
                 {/* Service Icon */}
-                <div className="relative z-10 w-20 h-20 bg-slate-600 rounded-3xl flex items-center justify-center text-white mb-8 group-hover:scale-105 transition-all duration-200 shadow-lg">
-                  {service.icon}
+                <div className="relative z-10 w-12 h-12 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-all duration-300 shadow-md">
+                  <div className="scale-75">{service.icon}</div>
                 </div>
                 
                 {/* Content */}
                 <div className="relative z-10">
-                  <h3 className="text-2xl font-black text-slate-900 mb-6 group-hover:text-slate-700 transition-colors duration-300">
+                  <h3 className="text-lg font-bold text-slate-900 mb-3 group-hover:text-slate-700 transition-colors duration-300 line-clamp-2">
                     {service.title}
                   </h3>
-                  <p className="text-slate-600 leading-relaxed mb-6 group-hover:text-slate-700 transition-colors duration-300">
+                  <p className="text-sm text-slate-600 leading-relaxed mb-4 group-hover:text-slate-700 transition-colors duration-300 line-clamp-3">
                     {service.description}
                   </p>
                   
                   {/* Service Details */}
-                  <div className="mb-6">
-                    <ul className="space-y-2">
-                      {service.details.map((detail, detailIndex) => (
-                        <li key={detailIndex} className="flex items-start text-sm text-slate-600 group-hover:text-slate-700 transition-colors duration-300">
-                          <div className="w-2 h-2 bg-slate-500 rounded-full mt-2 ml-3 flex-shrink-0"></div>
-                          <span>{detail}</span>
+                  <div className="mb-4">
+                    <ul className="space-y-1">
+                      {service.details.slice(0, 3).map((detail, detailIndex) => (
+                        <li key={detailIndex} className="flex items-start text-xs text-slate-600 group-hover:text-slate-700 transition-colors duration-300">
+                          <div className="w-1.5 h-1.5 bg-slate-400 rounded-full mt-1.5 ml-2 flex-shrink-0"></div>
+                          <span className="line-clamp-1">{detail}</span>
                         </li>
                       ))}
+                      {service.details.length > 3 && (
+                        <li className="text-xs text-slate-500 italic">
+                          +{service.details.length - 3} المزيد...
+                        </li>
+                      )}
                     </ul>
                   </div>
                   
                   {/* Price */}
                   {service.price > 0 && (
                   <div className="mb-4">
-                    <span className="text-2xl font-black text-slate-700">{service.price} {t('services.sar')}</span>
+                    <span className="text-lg font-bold text-emerald-600">{service.price} {t('services.sar')}</span>
                   </div>
                   )}
 
-                  {/* CTA Buttons */}
-                  <div className="flex flex-col gap-3">
+                  {/* CTA Button */}
                   <button 
-                      onClick={() => addToCart(service)}
-                      className="flex items-center justify-center bg-gradient-to-r from-slate-600 to-slate-700 text-white font-bold py-3 px-6 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 hover:from-slate-700 hover:to-slate-800 shadow-lg hover:shadow-xl"
-                    >
-                      <ShoppingCart size={18} className="ml-2 group-hover:scale-110 transition-transform duration-200" />
-                      <span>{t('services.addToCart')}</span>
+                    onClick={() => addToCart(service)}
+                    className="w-full flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold py-2.5 px-4 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:from-emerald-600 hover:to-teal-700 shadow-md hover:shadow-lg text-sm"
+                  >
+                    <ShoppingCart size={14} className="ml-1 group-hover:scale-110 transition-transform duration-300" />
+                    <span>{t('services.addToCart')}</span>
                   </button>
-                  </div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Success Stories CTA Section */}
-          <div className="text-center mt-16">
-            <div className="bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 rounded-3xl p-12 shadow-2xl max-w-4xl mx-auto relative overflow-hidden">
+          <div className="text-center mt-12">
+            <div className="bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 rounded-2xl p-8 md:p-12 shadow-xl max-w-4xl mx-auto relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent"></div>
               <div className="relative z-10">
-                <div className="text-4xl mb-6">🏆</div>
-                <h3 className="text-3xl font-black text-black mb-6">{t('works.badge')}</h3>
-                <p className="text-xl text-black/80 mb-10 max-w-2xl mx-auto">
+                <div className="text-3xl md:text-4xl mb-4 md:mb-6">🏆</div>
+                <h3 className="text-2xl md:text-3xl font-black text-black mb-4 md:mb-6">{t('works.badge')}</h3>
+                <p className="text-base md:text-lg text-black/80 mb-6 md:mb-8 max-w-2xl mx-auto px-4">
                   {t('works.subtitle')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button 
                     onClick={() => scrollToSection('works')}
-                    className="px-10 py-5 bg-white/20 backdrop-blur-sm text-black font-bold text-lg rounded-2xl border border-black/30 hover:bg-white/30 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
+                    className="px-8 md:px-10 py-3 md:py-5 bg-white/20 backdrop-blur-sm text-black font-bold text-base md:text-lg rounded-xl md:rounded-2xl border border-black/30 hover:bg-white/30 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
                   >
-                    <Play size={20} />
+                    <Play size={16} className="md:w-5 md:h-5" />
                     <span>{t('works.viewAll')}</span>
                   </button>
                 </div>
@@ -996,7 +1074,9 @@ ${t('contact.whatsappThanks')}`;
                   <img
                     src={project.image}
                     alt={project.title}
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                    className="w-full h-64 object-cover md:h-56 lg:h-56 object-center group-hover:scale-105 transition-transform duration-500"
+                    style={{ imageRendering: 'auto' }}
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'flex';
@@ -1037,11 +1117,11 @@ ${t('contact.whatsappThanks')}`;
                     </div>
                   </div>
                   
-                <div className="p-6">
-                  <h3 className="text-xl font-black text-slate-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300">
+                <div className="p-5">
+                  <h3 className="text-lg font-black text-slate-800 mb-2 group-hover:text-emerald-700 transition-colors duration-300 line-clamp-1">
                     {project.title}
                   </h3>
-                  <p className="text-slate-600 text-sm leading-relaxed group-hover:text-slate-700 transition-colors duration-300">
+                  <p className="text-slate-600 text-xs leading-relaxed group-hover:text-slate-700 transition-colors duration-300 line-clamp-2">
                     {project.description}
                   </p>
                 </div>
@@ -1542,62 +1622,18 @@ ${t('contact.whatsappThanks')}`;
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-16">
-            {[
-              {
-                name: "أحمد السعيد",
-                company: "شركة التطوير العقاري",
-                position: "المدير التنفيذي",
-                image: require('../images/testimonials/ahmed-saeed.jpg'),
-                comment: "خدمة استثنائية في التصميم المعماري. فريق محترف ومبدع ساعدنا في تحقيق رؤيتنا للمشروع. أنصح بالتعامل معهم بشدة.",
-                project: "تصميم مجمع سكني راقي",
-                gradient: "from-emerald-500 to-teal-500"
-              },
-              {
-                name: "فاطمة النعيمي",
-                company: "مطعم الشرق الأوسط",
-                position: "المديرة العامة",
-                image: require('../images/testimonials/fatima-naimi.jpg'),
-                comment: "تصميم داخلي وخارجي مذهل لمطعمنا. زاد من عدد العملاء بنسبة 60% وأصبح مطعمنا وجهة مفضلة للعائلات.",
-                project: "تصميم مطعم راقي",
-                gradient: "from-teal-500 to-cyan-500"
-              },
-              {
-                name: "محمد العلي",
-                company: "شركة الاستثمار التقني",
-                position: "رئيس مجلس الإدارة",
-                image: require('../images/testimonials/mohammed-ali.jpg'),
-                comment: "استشارات تقنية ممتازة ساعدتنا في تطوير أنظمتنا وتحسين كفاءة العمليات. فريق متخصص ومتفاني في العمل.",
-                project: "استشارات تقنية شاملة",
-                gradient: "from-stone-400 to-emerald-500"
-              },
-              {
-                name: "نورا المطيري",
-                company: "مؤسسة تعليمية",
-                position: "مديرة التطوير",
-                image: require('../images/testimonials/nora-mutairi.jpg'),
-                comment: "تخطيط حضري رائع لمؤسستنا التعليمية. صمموا مساحات تعزز التعلم والتفاعل بين الطلاب والمعلمين.",
-                project: "تخطيط حضري لمؤسسة تعليمية",
-                gradient: "from-emerald-600 to-teal-600"
-              },
-              {
-                name: "خالد الأحمد",
-                company: "سلسلة مقاهي",
-                position: "المدير العام",
-                image: require('../images/testimonials/khalid-ahmed.jpg'),
-                comment: "تطوير علامة تجارية مميزة ساعدتنا في التميز في السوق. هوية بصرية قوية تعكس شخصية علامتنا التجارية.",
-                project: "تطوير العلامة التجارية",
-                gradient: "from-teal-600 to-emerald-600"
-              },
-              {
-                name: "سارة القحطاني",
-                company: "مستشفى متخصص",
-                position: "مديرة التطوير",
-                image: require('../images/testimonials/sara-qhtani.jpg'),
-                comment: "تصميم مناظر طبيعية مريحة للمستشفى. ساعد في تحسين تجربة المرضى والزوار وجعل البيئة أكثر راحة.",
-                project: "تصميم المناظر الطبيعية",
-                gradient: "from-emerald-700 to-teal-700"
-              }
-            ].map((testimonial, index) => (
+            {isLoadingTestimonials ? (
+              <div className="col-span-full text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <p className="mt-4 text-gray-600">جاري تحميل آراء العملاء...</p>
+              </div>
+            ) : getDisplayTestimonials().length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <div className="text-4xl mb-4">💬</div>
+                <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد آراء عملاء متاحة</h3>
+                <p className="text-gray-500">سيتم عرض آراء العملاء هنا عند إضافتها من لوحة التحكم</p>
+              </div>
+            ) : getDisplayTestimonials().map((testimonial, index) => (
               <div
                 key={index}
                 className="group relative bg-white/95 backdrop-blur-lg rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-emerald-100/50 hover:border-emerald-200/50 transform hover:-translate-y-2 hover:scale-102 overflow-hidden"
@@ -1608,35 +1644,41 @@ ${t('contact.whatsappThanks')}`;
                   {/* Client Info */}
                   <div className="flex items-center mb-6">
                     <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <img
-                        src={testimonial.image}
-                        alt={testimonial.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className={`w-full h-full bg-gradient-to-r ${testimonial.gradient} flex items-center justify-center text-white font-bold text-xl hidden`}>
-                        {testimonial.name.charAt(0)}
+                      {testimonial.image ? (
+                        <img
+                          src={testimonial.image}
+                          alt={testimonial.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-full h-full bg-gradient-to-r ${testimonial.gradient} flex items-center justify-center text-white font-bold text-xl ${testimonial.image ? 'hidden' : 'flex'}`}>
+                        {testimonial.name ? testimonial.name.charAt(0) : '?'}
                       </div>
                     </div>
                     <div className="mr-4 flex-1">
                       <h4 className="text-lg font-bold text-gray-800 group-hover:text-emerald-700 transition-colors duration-300">
-                        {testimonial.name}
+                        {testimonial.name || 'عميل'}
                       </h4>
-                      <p className="text-emerald-600 font-medium text-sm">
-                        {testimonial.position}
-                      </p>
-                      <p className="text-gray-500 text-xs">
-                        {testimonial.company}
-                      </p>
+                      {testimonial.position && (
+                        <p className="text-emerald-600 font-medium text-sm">
+                          {testimonial.position}
+                        </p>
+                      )}
+                      {testimonial.company && (
+                        <p className="text-gray-500 text-xs">
+                          {testimonial.company}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
                   {/* Stars */}
                   <div className="flex items-center mb-4">
-                    {[...Array(5)].map((_, i) => (
+                    {[...Array(testimonial.rating || 5)].map((_, i) => (
                       <Star key={i} size={16} className="text-yellow-400 fill-current" />
                     ))}
                   </div>
@@ -1644,14 +1686,16 @@ ${t('contact.whatsappThanks')}`;
                   {/* Comment */}
                   <div className="relative mb-6">
                     <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300 text-sm">
-                      {testimonial.comment}
+                      {testimonial.comment || 'لا يوجد تعليق متاح'}
                     </p>
                   </div>
                   
                   {/* Project Badge */}
-                  <div className={`inline-block px-3 py-2 bg-gradient-to-r ${testimonial.gradient} rounded-full text-white font-medium text-xs group-hover:scale-105 transition-transform duration-300`}>
-                    {testimonial.project}
-                  </div>
+                  {testimonial.project && (
+                    <div className={`inline-block px-3 py-2 bg-gradient-to-r ${testimonial.gradient} rounded-full text-white font-medium text-xs group-hover:scale-105 transition-transform duration-300`}>
+                      {testimonial.project}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -1989,31 +2033,36 @@ ${t('contact.whatsappThanks')}`;
                   <span className="text-gray-400 text-sm font-medium">{t('footer.socialMediaFollow')}</span>
                   <div className="flex items-center space-x-reverse space-x-3">
                     {firebaseContactInfo.facebook && (
-                      <a href={firebaseContactInfo.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">f</span>
+                      <a href={firebaseContactInfo.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898v-2.89h2.54V9.845c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.987C18.343 21.128 22 16.991 22 12z"/></svg>
                     </a>
                     )}
                     {firebaseContactInfo.twitter && (
-                      <a href={firebaseContactInfo.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">t</span>
+                      <a href={firebaseContactInfo.twitter} target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M22.162 5.656c-.77.342-1.597.572-2.465.676a4.302 4.302 0 0 0 1.887-2.377 8.61 8.61 0 0 1-2.727 1.042 4.292 4.292 0 0 0-7.311 3.915 12.175 12.175 0 0 1-8.84-4.48 4.292 4.292 0 0 0 1.328 5.729 4.27 4.27 0 0 1-1.944-.537v.054a4.293 4.293 0 0 0 3.444 4.207 4.302 4.302 0 0 1-1.939.074 4.294 4.294 0 0 0 4.007 2.978 8.606 8.606 0 0 1-5.327 1.838c-.346 0-.688-.02-1.025-.06a12.145 12.145 0 0 0 6.574 1.927c7.889 0 12.206-6.538 12.206-12.206 0-.186-.004-.372-.012-.556a8.717 8.717 0 0 0 2.14-2.223z"/></svg>
                     </a>
                     )}
                     {firebaseContactInfo.instagram && (
-                      <a href={firebaseContactInfo.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">i</span>
+                      <a href={firebaseContactInfo.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.056 1.97.24 2.427.403a4.92 4.92 0 0 1 1.78 1.153 4.92 4.92 0 0 1 1.153 1.78c.163.457.347 1.257.403 2.427.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.056 1.17-.24 1.97-.403 2.427a4.92 4.92 0 0 1-1.153 1.78 4.92 4.92 0 0 1-1.78 1.153c-.457.163-1.257.347-2.427.403-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.056-1.97-.24-2.427-.403a4.92 4.92 0 0 1-1.78-1.153 4.92 4.92 0 0 1-1.153-1.78c-.163-.457-.347-1.257-.403-2.427-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.056-1.17.24-1.97.403-2.427a4.92 4.92 0 0 1 1.153-1.78 4.92 4.92 0 0 1 1.78-1.153c.457-.163 1.257-.347 2.427-.403 1.266-.058 1.646-.07 4.85-.07zm0 1.62c-3.145 0-3.512.012-4.747.068-.98.045-1.51.208-1.862.346-.469.182-.804.4-1.156.752s-.57.687-.752 1.156c-.138.352-.301.882-.346 1.862-.056 1.235-.068 1.602-.068 4.747s.012 3.512.068 4.747c.045.98.208 1.51.346 1.862.182.469.4.804.752 1.156s.687.57 1.156.752c.352.138.882.301 1.862.346 1.235.056 1.602.068 4.747.068s3.512-.012 4.747-.068c.98-.045 1.51-.208 1.862-.346.469-.182.804-.4 1.156-.752s.57-.687.752-1.156c.138-.352.301-.882.346-1.862.056-1.235.068-1.602.068-4.747s-.012-3.512-.068-4.747c-.045-.98-.208-1.51-.346-1.862-.182-.469-.4-.804-.752-1.156s-.687-.57-1.156-.752c-.352-.138-.882-.301-1.862-.346-1.235-.056-1.602-.068-4.747-.068zm0 3.89a5.327 5.327 0 1 1 0 10.654 5.327 5.327 0 0 1 0-10.654zm6.406-2.93a1.24 1.24 0 1 1 0 2.48 1.24 1.24 0 0 1 0-2.48z"/></svg>
                     </a>
                     )}
                     {firebaseContactInfo.linkedin && (
-                      <a href={firebaseContactInfo.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                      <span className="text-white text-sm">l</span>
+                      <a href={firebaseContactInfo.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-10h3v10zm-1.5-11.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.784 1.764-1.75 1.764zm13.5 11.268h-3v-5.604c0-1.336-.027-3.055-1.862-3.055-1.862 0-2.147 1.454-2.147 2.956v5.703h-3v-10h2.879v1.367h.041c.401-.76 1.379-1.56 2.837-1.56 3.035 0 3.596 2.001 3.596 4.605v5.588z"/></svg>
                     </a>
                     )}
                     {firebaseContactInfo.youtube && (
-                      <a href={firebaseContactInfo.youtube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
-                        <span className="text-white text-sm">y</span>
+                      <a href={firebaseContactInfo.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M23.498 6.186a2.999 2.999 0 0 0-2.113-2.12C19.276 3.5 12 3.5 12 3.5s-7.276 0-9.385.566A2.999 2.999 0 0 0 .502 6.186C0 8.297 0 12 0 12s0 3.703.502 5.814a2.999 2.999 0 0 0 2.113 2.12C4.724 20.5 12 20.5 12 20.5s7.276 0 9.385-.566a2.999 2.999 0 0 0 2.113-2.12C24 15.703 24 12 24 12s0-3.703-.502-5.814zM9.75 15.5v-7l6 3.5-6 3.5z"/></svg>
                       </a>
                     )}
-                    {!firebaseContactInfo.facebook && !firebaseContactInfo.twitter && !firebaseContactInfo.instagram && !firebaseContactInfo.linkedin && !firebaseContactInfo.youtube && (
+                    {firebaseContactInfo.whatsapp && (
+                      <a href={firebaseContactInfo.whatsapp} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-500 transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M20.52 3.48A11.86 11.86 0 0 0 12.06 0C5.5 0 .2 5.3.2 11.86c0 2.087.55 4.1 1.6 5.9L0 24l6.4-1.66a11.6 11.6 0 0 0 5.66 1.44h.01c6.55 0 11.86-5.3 11.86-11.86a11.84 11.84 0 0 0-3.38-8.44zM12.06 21.2h-.01a9.32 9.32 0 0 1-4.75-1.3l-.34-.2-3.8.99 1.02-3.7-.22-.38a9.35 9.35 0 0 1-1.42-4.95c0-5.15 4.19-9.33 9.35-9.33a9.27 9.27 0 0 1 6.62 2.73 9.27 9.27 0 0 1 2.73 6.6c0 5.16-4.19 9.35-9.36 9.35zm5.33-6.93c-.29-.15-1.7-.84-1.96-.93-.26-.1-.45-.15-.64.15-.19.29-.74.92-.91 1.11-.17.19-.34.22-.63.07-.29-.15-1.24-.46-2.36-1.46-.87-.77-1.46-1.72-1.63-2.01-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.52.15-.17.19-.29.29-.48.1-.19.05-.37-.02-.52-.07-.15-.64-1.55-.88-2.13-.23-.55-.47-.48-.64-.49l-.55-.01c-.19 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.19 2.1 3.2 5.09 4.49.71.31 1.26.5 1.69.64.71.23 1.36.2 1.88.12.57-.08 1.7-.69 1.94-1.36.24-.67.24-1.24.17-1.36-.07-.12-.26-.19-.55-.34z"/></svg>
+                      </a>
+                    )}
+                    {!firebaseContactInfo.facebook && !firebaseContactInfo.twitter && !firebaseContactInfo.instagram && !firebaseContactInfo.linkedin && !firebaseContactInfo.youtube && !firebaseContactInfo.whatsapp && (
                       <span className="text-gray-500 text-sm">{t('footer.socialLinksComingSoon')}</span>
                     )}
                   </div>
@@ -2227,19 +2276,6 @@ ${t('contact.whatsappThanks')}`;
         </div>
       )}
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href={`https://wa.me/966550500410`}
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-24 right-8 z-50 bg-[#25D366] hover:bg-[#1ebe5a] text-white rounded-full shadow-xl w-16 h-16 flex items-center justify-center transition-transform duration-200 hover:scale-110"
-        aria-label="WhatsApp"
-      >
-        <svg viewBox="0 0 32 32" width="34" height="34" fill="currentColor" aria-hidden="true">
-          <path d="M19.11 17.27c-.26-.13-1.53-.76-1.77-.85-.24-.09-.42-.13-.6.13s-.69.85-.85 1.02c-.16.17-.31.19-.57.06-.26-.13-1.1-.41-2.1-1.31-.78-.69-1.31-1.54-1.47-1.8-.16-.26-.02-.4.12-.52.12-.12.26-.31.39-.46.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.46-.06-.13-.6-1.45-.82-1.99-.22-.53-.44-.46-.6-.47-.15-.01-.32-.01-.49-.01-.17 0-.46.06-.7.32-.24.26-.92.9-.92 2.2s.94 2.55 1.07 2.73c.13.17 1.85 2.82 4.48 3.95.63.27 1.11.43 1.49.55.63.2 1.2.17 1.65.1.5-.07 1.53-.63 1.75-1.24.22-.61.22-1.13.15-1.24-.07-.11-.24-.17-.5-.3zM16 3c7.18 0 13 5.82 13 13 0 7.18-5.82 13-13 13-2.28 0-4.41-.6-6.26-1.67L3 29l1.73-6.57C3.6 20.6 3 18.47 3 16 3 8.82 8.82 3 16 3zm0 2.34c-5.88 0-10.66 4.78-10.66 10.66 0 2.09.62 4.03 1.68 5.66l-1.1 4.16 4.27-1.12c1.6 1.04 3.5 1.64 5.54 1.64 5.88 0 10.66-4.78 10.66-10.66S21.88 5.34 16 5.34z"></path>
-        </svg>
-      </a>
-
       {/* Scroll to Top Button */}
       <div className="fixed bottom-8 right-8 z-50">
         <button 
@@ -2413,6 +2449,25 @@ ${t('contact.whatsappThanks')}`;
             {/* Image Info */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
               {currentImageIndex + 1} / {selectedProject.images.length}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditProjectModalOpen && selectedProject && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl">
+            <h2 className="text-xl font-bold mb-4">تعديل المشروع</h2>
+            {/* هنا يمكنك وضع حقول التعديل لاحقاً */}
+            <div className="flex gap-4 justify-end mt-6">
+              <button
+                className="px-4 py-2 bg-gray-200 rounded-lg"
+                onClick={() => setIsEditProjectModalOpen(false)}
+              >إلغاء</button>
+              <button
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+                onClick={() => setIsEditProjectModalOpen(false)}
+              >حفظ</button>
             </div>
           </div>
         </div>
