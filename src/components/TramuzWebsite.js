@@ -42,6 +42,80 @@ const TramuzWebsite = () => {
     youtube: ""
   });
   const [isLoadingContact, setIsLoadingContact] = useState(false);
+
+  // Contact form state
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    serviceType: "",
+    projectDetails: ""
+  });
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+
+  // دالة إرسال بيانات النموذج إلى WhatsApp
+  const sendContactFormToWhatsApp = async (formData) => {
+    if (!firebaseContactInfo.whatsapp) {
+      alert(t('contact.form.whatsappUnavailableAlert'));
+      return;
+    }
+
+    const whatsappNumber = firebaseContactInfo.whatsapp.replace(/[^0-9]/g, "");
+    
+    // تحضير الرسالة
+    const message = `🔔 *طلب جديد من موقع ترامز*
+
+👤 *الاسم:* ${formData.name}
+📧 *البريد الإلكتروني:* ${formData.email}
+📞 *رقم الهاتف:* ${formData.phone}
+🎯 *نوع الخدمة:* ${formData.serviceType}
+📝 *تفاصيل المشروع:*
+${formData.projectDetails}
+
+📅 *التاريخ:* ${new Date().toLocaleDateString('ar-SA')}
+⏰ *الوقت:* ${new Date().toLocaleTimeString('ar-SA')}
+
+_تم إرسال هذا الطلب من موقع ترامز الرسمي_`;
+
+    // إنشاء رابط WhatsApp
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    
+    // فتح WhatsApp
+    window.open(whatsappUrl, '_blank');
+  };
+
+  // دالة معالجة إرسال النموذج
+  const handleSubmitForm = async (e) => {
+    e.preventDefault();
+    
+    // التحقق من البيانات المطلوبة
+    if (!contactForm.name || !contactForm.email || !contactForm.phone) {
+      alert(t('contact.form.requiredFields'));
+      return;
+    }
+
+    setIsSubmittingForm(true);
+    
+    try {
+      await sendContactFormToWhatsApp(contactForm);
+      
+      // إعادة تعيين النموذج
+      setContactForm({
+        name: "",
+        email: "",
+        phone: "",
+        serviceType: "",
+        projectDetails: ""
+      });
+      
+      alert(t('contact.form.formSuccess'));
+    } catch (error) {
+      console.error("خطأ في إرسال النموذج:", error);
+      alert(t('contact.form.formError'));
+    } finally {
+      setIsSubmittingForm(false);
+    }
+  };
   const [firebaseCategories, setFirebaseCategories] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -55,15 +129,15 @@ const TramuzWebsite = () => {
   // Site visibility and CMS content
   const [siteVisibility, setSiteVisibility] = useState({
     hero: true,
-    projects: true,
+    about: true,
     services: true,
+    works: true,
     testimonials: true,
     team: true,
     clients: true,
-    categories: true,
-    contact: true,
     stats: true,
-    about: true,
+    contact: true,
+    categories: true,
     why: true
   });
   const [aboutData, setAboutData] = useState(null);
@@ -197,6 +271,19 @@ const TramuzWebsite = () => {
     }
   };
 
+  // تحميل إعدادات الظهور من Firebase
+  const fetchVisibilitySettings = async () => {
+    try {
+      const docRef = doc(db, 'settings', 'visibility');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setSiteVisibility(docSnap.data());
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل إعدادات الظهور:', error);
+    }
+  };
+
   // دالة لتحويل آراء العملاء من Firebase إلى تنسيق مناسب للعرض
   const getDisplayTestimonials = () => {
     if (firebaseTestimonials.length === 0) return [];
@@ -325,14 +412,9 @@ const TramuzWebsite = () => {
     fetchClientsFromFirebase();
     fetchTestimonialsFromFirebase();
     // Visibility & CMS content
+    fetchVisibilitySettings();
+    // CMS content
     (async () => {
-      try {
-        const visRef = doc(db, 'settings', 'visibility');
-        const visSnap = await getDoc(visRef);
-        if (visSnap.exists()) setSiteVisibility(v => ({ ...v, ...visSnap.data() }));
-      } catch (e) {
-        console.error('خطأ في تحميل إعدادات الظهور:', e);
-      }
       try {
         const aboutRef = doc(db, 'settings', 'about');
         const aboutSnap = await getDoc(aboutRef);
@@ -765,6 +847,7 @@ ${t('contact.whatsappThanks')}`;
       )}
 
       {/* About Section */}
+      {siteVisibility.about && (
       <section id="about" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl"></div>
@@ -897,9 +980,11 @@ ${t('contact.whatsappThanks')}`;
           )}
         </div>
       </section>
+      )}
 
       {/* Services Section */}
-      <section id="services" className="py-16 md:py-20 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
+      {siteVisibility.services && (
+        <section id="services" className="py-16 md:py-20 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-12 md:mb-16">
             <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 font-bold text-xs md:text-sm mb-4 md:mb-6">
@@ -963,11 +1048,11 @@ ${t('contact.whatsappThanks')}`;
 
                   {/* CTA Button */}
                   <button 
-                    onClick={() => addToCart(service)}
+                      onClick={() => addToCart(service)}
                     className="w-full flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold py-2.5 px-4 rounded-xl opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:from-emerald-600 hover:to-teal-700 shadow-md hover:shadow-lg text-sm"
-                  >
+                    >
                     <ShoppingCart size={14} className="ml-1 group-hover:scale-110 transition-transform duration-300" />
-                    <span>{t('services.addToCart')}</span>
+                      <span>{t('services.addToCart')}</span>
                   </button>
                 </div>
               </div>
@@ -998,8 +1083,10 @@ ${t('contact.whatsappThanks')}`;
           </div>
         </div>
       </section>
+      )}
 
       {/* Our Works Section */}
+      {siteVisibility.works && (
       <section id="works" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl"></div>
@@ -1156,8 +1243,10 @@ ${t('contact.whatsappThanks')}`;
           </div>
         </div>
       </section>
+      )}
 
       {/* Our Clients Section */}
+      {siteVisibility.clients && (
       <section id="clients" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl"></div>
@@ -1397,8 +1486,10 @@ ${t('contact.whatsappThanks')}`;
           </div>
         </div>
       </section>
+      )}
 
       {/* Team Section */}
+      {siteVisibility.team && (
       <section id="team" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/30 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
@@ -1512,8 +1603,10 @@ ${t('contact.whatsappThanks')}`;
           </div>
         </div>
       </section>
+      )}
 
       {/* Stats Section */}
+      {siteVisibility.stats && (
       <section id="stats" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/20 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl"></div>
@@ -1598,8 +1691,10 @@ ${t('contact.whatsappThanks')}`;
           </div>
         </div>
       </section>
+      )}
 
       {/* Testimonials Section */}
+      {siteVisibility.testimonials && (
       <section id="testimonials" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/30 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
@@ -1645,15 +1740,15 @@ ${t('contact.whatsappThanks')}`;
                   <div className="flex items-center mb-6">
                     <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-lg">
                       {testimonial.image ? (
-                        <img
-                          src={testimonial.image}
-                          alt={testimonial.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
+                      <img
+                        src={testimonial.image}
+                        alt={testimonial.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
                       ) : null}
                       <div className={`w-full h-full bg-gradient-to-r ${testimonial.gradient} flex items-center justify-center text-white font-bold text-xl ${testimonial.image ? 'hidden' : 'flex'}`}>
                         {testimonial.name ? testimonial.name.charAt(0) : '?'}
@@ -1664,14 +1759,14 @@ ${t('contact.whatsappThanks')}`;
                         {testimonial.name || 'عميل'}
                       </h4>
                       {testimonial.position && (
-                        <p className="text-emerald-600 font-medium text-sm">
-                          {testimonial.position}
-                        </p>
+                      <p className="text-emerald-600 font-medium text-sm">
+                        {testimonial.position}
+                      </p>
                       )}
                       {testimonial.company && (
-                        <p className="text-gray-500 text-xs">
-                          {testimonial.company}
-                        </p>
+                      <p className="text-gray-500 text-xs">
+                        {testimonial.company}
+                      </p>
                       )}
                     </div>
                   </div>
@@ -1692,9 +1787,9 @@ ${t('contact.whatsappThanks')}`;
                   
                   {/* Project Badge */}
                   {testimonial.project && (
-                    <div className={`inline-block px-3 py-2 bg-gradient-to-r ${testimonial.gradient} rounded-full text-white font-medium text-xs group-hover:scale-105 transition-transform duration-300`}>
-                      {testimonial.project}
-                    </div>
+                  <div className={`inline-block px-3 py-2 bg-gradient-to-r ${testimonial.gradient} rounded-full text-white font-medium text-xs group-hover:scale-105 transition-transform duration-300`}>
+                    {testimonial.project}
+                  </div>
                   )}
                 </div>
               </div>
@@ -1726,8 +1821,10 @@ ${t('contact.whatsappThanks')}`;
           </div>
         </div>
       </section>
+      )}
 
       {/* Contact Section */}
+      {siteVisibility.contact && (
       <section id="contact" className="py-32 bg-gradient-to-br from-stone-50 via-white to-emerald-50/30 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
@@ -1818,44 +1915,74 @@ ${t('contact.whatsappThanks')}`;
                   <p className="text-gray-600 text-lg">{t('contact.form.subtitle')}</p>
                 </div>
 
-                <form className="space-y-8">
-                  {[
-                    { label: t('contact.form.name'), type: "text", placeholder: t('contact.form.namePlaceholder') },
-                    { label: t('contact.form.email'), type: "email", placeholder: "your@email.com", dir: "ltr" },
-                    { label: t('contact.form.phone'), type: "tel", placeholder: "+966 50 123 4567", dir: "ltr" }
-                  ].map((field, index) => (
-                    <div key={index} className="group">
+                <form onSubmit={handleSubmitForm} className="space-y-8">
+                  <div className="group">
                       <label className="block text-sm font-bold text-gray-700 mb-3">
-                        {field.label}
+                      {t('contact.form.name')}
                       </label>
                       <input
-                        type={field.type}
+                      type="text"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
                         className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg group-hover:border-emerald-300"
-                        placeholder={field.placeholder}
-                        dir={field.dir || "rtl"}
+                      placeholder={t('contact.form.namePlaceholder')}
+                      required
                       />
                     </div>
-                  ))}
+                  
+                  <div className="group">
+                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                      {t('contact.form.email')}
+                    </label>
+                    <input
+                      type="email"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
+                      className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg group-hover:border-emerald-300"
+                      placeholder="your@email.com"
+                      dir="ltr"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="group">
+                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                      {t('contact.form.phone')}
+                    </label>
+                    <input
+                      type="tel"
+                      value={contactForm.phone}
+                      onChange={(e) => setContactForm({...contactForm, phone: e.target.value})}
+                      className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg group-hover:border-emerald-300"
+                      placeholder="+966 50 123 4567"
+                      dir="ltr"
+                      required
+                    />
+                  </div>
                   
                   <div className="group">
                     <label className="block text-sm font-bold text-gray-700 mb-3">
                       {t('contact.form.serviceType')}
                     </label>
-                    <select className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg group-hover:border-emerald-300">
-                      <option>{t('contact.form.selectService')}</option>
-                      <option>{t('services.interiorDesign.title')}</option>
-                      <option>{t('services.exteriorDesign.title')}</option>
-                      <option>{t('services.urbanPlanning.title')}</option>
-                      <option>{t('services.landscapeDesign.title')}</option>
-                      <option>{t('services.brandDevelopment.title')}</option>
-                      <option>{t('services.marketingConsulting.title')}</option>
-                      <option>{t('contact.form.operationalConsulting')}</option>
-                      <option>{t('contact.form.technicalConsulting')}</option>
-                      <option>{t('contact.form.recruitmentTraining')}</option>
-                      <option>{t('contact.form.contractManagement')}</option>
-                      <option>{t('contact.form.feasibilityStudy')}</option>
-                      <option>{t('contact.form.corporateRelations')}</option>
-                      <option>{t('contact.form.other')}</option>
+                    <select 
+                      value={contactForm.serviceType}
+                      onChange={(e) => setContactForm({...contactForm, serviceType: e.target.value})}
+                      className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg group-hover:border-emerald-300"
+                    >
+                      <option value="">{t('contact.form.selectService')}</option>
+                      <option value={t('services.interiorDesign.title')}>{t('services.interiorDesign.title')}</option>
+                      <option value={t('services.exteriorDesign.title')}>{t('services.exteriorDesign.title')}</option>
+                      <option value={t('services.urbanPlanning.title')}>{t('services.urbanPlanning.title')}</option>
+                      <option value={t('services.landscapeDesign.title')}>{t('services.landscapeDesign.title')}</option>
+                      <option value={t('services.brandDevelopment.title')}>{t('services.brandDevelopment.title')}</option>
+                      <option value={t('services.marketingConsulting.title')}>{t('services.marketingConsulting.title')}</option>
+                      <option value={t('contact.form.operationalConsulting')}>{t('contact.form.operationalConsulting')}</option>
+                      <option value={t('contact.form.technicalConsulting')}>{t('contact.form.technicalConsulting')}</option>
+                      <option value={t('contact.form.recruitmentTraining')}>{t('contact.form.recruitmentTraining')}</option>
+                      <option value={t('contact.form.contractManagement')}>{t('contact.form.contractManagement')}</option>
+                      <option value={t('contact.form.feasibilityStudy')}>{t('contact.form.feasibilityStudy')}</option>
+                      <option value={t('contact.form.corporateRelations')}>{t('contact.form.corporateRelations')}</option>
+                      <option value={t('contact.form.other')}>{t('contact.form.other')}</option>
                     </select>
                   </div>
                   
@@ -1865,6 +1992,8 @@ ${t('contact.whatsappThanks')}`;
                     </label>
                     <textarea
                       rows={4}
+                      value={contactForm.projectDetails}
+                      onChange={(e) => setContactForm({...contactForm, projectDetails: e.target.value})}
                       className="w-full px-6 py-4 border-2 border-emerald-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 text-lg resize-none group-hover:border-emerald-300"
                       placeholder={t('contact.form.projectDetailsPlaceholder')}
                     ></textarea>
@@ -1872,18 +2001,76 @@ ${t('contact.whatsappThanks')}`;
                   
                   <button
                     type="submit"
-                    className="w-full px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xl rounded-2xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3"
+                    disabled={isSubmittingForm}
+                    className={`w-full px-12 py-6 text-white font-bold text-xl rounded-2xl transition-all duration-300 flex items-center justify-center space-x-reverse space-x-3 ${
+                      isSubmittingForm 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-2xl hover:from-emerald-700 hover:to-teal-700 transform hover:scale-105'
+                    }`}
                   >
+                    {isSubmittingForm ? (
+                      <>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        <span>{t('contact.form.sending')}</span>
+                      </>
+                    ) : (
+                      <>
                     <Sparkles size={24} />
-                    <span>{t('contact.form.send')}</span>
-                    <ArrowRight size={24} />
+                        <span>{t('contact.form.sendViaWhatsApp')}</span>
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+                        </svg>
+                      </>
+                    )}
                   </button>
                 </form>
+                
+                {/* WhatsApp Notice */}
+                {firebaseContactInfo.whatsapp && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-[#25D366] rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-emerald-800">
+                          {t('contact.form.whatsappNotice.title')}
+                        </p>
+                        <p className="text-xs text-emerald-600 mt-1">
+                          {t('contact.form.whatsappNotice.description')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!firebaseContactInfo.whatsapp && (
+                  <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-yellow-800">
+                          {t('contact.form.whatsappUnavailable.title')}
+                        </p>
+                        <p className="text-xs text-yellow-600 mt-1">
+                          {t('contact.form.whatsappUnavailable.description')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </section>
+      )}
 
       {/* Success Stories Section */}
       <section className="py-16 bg-gradient-to-br from-stone-50 via-white to-emerald-50/30">
@@ -2471,6 +2658,43 @@ ${t('contact.whatsappThanks')}`;
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating WhatsApp Button */}
+      {firebaseContactInfo.whatsapp && (
+        <a
+          href={`https://wa.me/${firebaseContactInfo.whatsapp.replace(/[^0-9]/g, "")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 left-6 z-50 group"
+          aria-label="تواصل معنا عبر WhatsApp"
+        >
+          <div className="relative">
+            {/* Pulse Animation */}
+            <div className="absolute inset-0 bg-[#25D366] rounded-full animate-ping opacity-75"></div>
+            <div className="absolute inset-0 bg-[#25D366] rounded-full animate-pulse"></div>
+            
+            {/* Main Button */}
+            <div className="relative w-14 h-14 bg-[#25D366] hover:bg-[#1ebe5a] rounded-full shadow-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-2xl">
+              <svg 
+                className="w-8 h-8 text-white" 
+                fill="currentColor" 
+                viewBox="0 0 24 24" 
+                aria-hidden="true"
+              >
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+              </svg>
+            </div>
+
+            {/* Tooltip */}
+            <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              <div className="bg-gray-800 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap shadow-lg">
+                تواصل معنا عبر WhatsApp
+                <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+              </div>
+            </div>
+          </div>
+        </a>
       )}
     </div>
   );

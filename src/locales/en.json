@@ -542,7 +542,21 @@
       "corporateRelations": "Corporate Relations Management",
       "other": "Other",
       "projectDetails": "Project Details",
-      "projectDetailsPlaceholder": "Tell us about your project and how we can help you..."
+      "projectDetailsPlaceholder": "Tell us about your project and how we can help you...",
+      "sendViaWhatsApp": "Send via WhatsApp",
+      "sending": "Sending...",
+      "whatsappNotice": {
+        "title": "Your request will be sent directly to WhatsApp",
+        "description": "After clicking \"Send\" WhatsApp will open with all your data ready to send"
+      },
+      "whatsappUnavailable": {
+        "title": "WhatsApp service is currently unavailable",
+        "description": "Please contact us via phone or email mentioned below"
+      },
+      "formSuccess": "Your request has been sent successfully! We will contact you soon.",
+      "formError": "An error occurred while sending the request. Please try again.",
+      "requiredFields": "Please fill in all required fields (Name, Email, Phone Number)",
+      "whatsappUnavailableAlert": "WhatsApp number is not available at the moment. Please contact us via phone or email."
     },
     "experienceText": "Get ready for an exceptional experience with the professional Tramuz team - we're here to transform your dreams into amazing reality",
     "whatsappMessageHeader": "Hello, I would like to request the following services from Tramuz company:",
