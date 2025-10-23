@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { db } from "../../firebase";
-import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { Plus, Trash2, Edit, Save, X, Eye, BarChart3, Settings, FolderOpen, Star, Award, Sparkles, LogOut, Users } from 'lucide-react';
 import Login from './Login';
 import "./Dashboard.css";
@@ -429,14 +429,27 @@ const Dashboard = () => {
   // تحميل الخدمات من Firebase
   const fetchServices = async () => {
     try {
+      console.log("بدء تحميل الخدمات من Firebase...");
       const querySnapshot = await getDocs(collection(db, "services"));
       const servicesList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      console.log(`تم تحميل ${servicesList.length} خدمة من Firebase:`, servicesList);
+      
+      // تسجيل الخدمات المتميزة
+      const featuredServices = servicesList.filter(service => service.featured);
+      console.log(`الخدمات المتميزة: ${featuredServices.length}`, featuredServices);
+      
       setServices(servicesList);
     } catch (error) {
       console.error("خطأ في تحميل الخدمات: ", error);
+      console.error("تفاصيل الخطأ:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
     }
   };
 
@@ -780,6 +793,65 @@ const Dashboard = () => {
     }
   }, [isLoggedIn]);
 
+  // مراقبة التغييرات في الخدمات
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    console.log("بدء مراقبة التغييرات في الخدمات...");
+    
+    const unsubscribe = onSnapshot(collection(db, "services"), (snapshot) => {
+      console.log("تغيير في الخدمات تم اكتشافه!");
+      
+      const changes = snapshot.docChanges();
+      changes.forEach((change) => {
+        if (change.type === "added") {
+          console.log("تمت إضافة خدمة جديدة:", change.doc.data());
+        } else if (change.type === "modified") {
+          console.log("تم تعديل خدمة:", change.doc.data());
+        } else if (change.type === "removed") {
+          console.log("تم حذف خدمة:", change.doc.id, change.doc.data());
+          alert(`تحذير: تم حذف خدمة تلقائياً! ID: ${change.doc.id}`);
+        }
+      });
+      
+      // تحديث قائمة الخدمات
+      const servicesList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setServices(servicesList);
+    }, (error) => {
+      console.error("خطأ في مراقبة الخدمات:", error);
+    });
+
+    return () => {
+      console.log("إيقاف مراقبة الخدمات");
+      unsubscribe();
+    };
+  }, [isLoggedIn]);
+
+  // دالة مساعدة لتنسيق التاريخ
+  const formatDate = (date) => {
+    if (!date) return 'غير محدد';
+    
+    // إذا كان Firebase Timestamp
+    if (date.seconds) {
+      return new Date(date.seconds * 1000).toLocaleDateString('ar-SA');
+    }
+    
+    // إذا كان Date object
+    if (date instanceof Date) {
+      return date.toLocaleDateString('ar-SA');
+    }
+    
+    // إذا كان string
+    if (typeof date === 'string') {
+      return new Date(date).toLocaleDateString('ar-SA');
+    }
+    
+    return 'غير محدد';
+  };
+
   // دالة تسجيل الخروج
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
@@ -856,7 +928,9 @@ const Dashboard = () => {
 
     try {
       setIsLoading(true);
-      await addDoc(collection(db, "services"), {
+      
+      // تسجيل البيانات قبل الإرسال
+      const serviceData = {
         title: serviceTitle,
         title_en: serviceTitleEn || serviceTitle,
         description: serviceDescription,
@@ -865,8 +939,15 @@ const Dashboard = () => {
         price: servicePrice || 0,
         featured: !!serviceFeatured,
         order: Number(serviceOrder) || 0,
-        createdAt: new Date().toISOString()
-      });
+        createdAt: new Date(),
+        lastModified: new Date()
+      };
+      
+      console.log("إضافة خدمة جديدة:", serviceData);
+      
+      const docRef = await addDoc(collection(db, "services"), serviceData);
+      console.log("تم إنشاء الخدمة بنجاح مع ID:", docRef.id);
+      
       alert("تمت إضافة الخدمة بنجاح!");
       
       // إعادة تعيين النموذج
@@ -882,9 +963,42 @@ const Dashboard = () => {
       
       // إعادة تحميل الخدمات
       await fetchServices();
+      
+      // التحقق من وجود الخدمة بعد الإضافة
+      setTimeout(async () => {
+        try {
+          const docSnap = await getDoc(doc(db, "services", docRef.id));
+          if (docSnap.exists()) {
+            const serviceData = docSnap.data();
+            console.log("الخدمة موجودة بعد الإضافة:", serviceData);
+            
+            // التحقق من البيانات المهمة
+            if (!serviceData.title) {
+              console.error("تحذير: عنوان الخدمة مفقود!");
+            }
+            if (serviceData.featured === undefined) {
+              console.error("تحذير: حالة التميز غير محددة!");
+            }
+            
+            // إعادة تحميل الخدمات للتأكد
+            await fetchServices();
+          } else {
+            console.error("الخدمة غير موجودة بعد الإضافة!");
+            alert("تحذير: الخدمة لم تُحفظ بشكل صحيح");
+          }
+        } catch (error) {
+          console.error("خطأ في التحقق من الخدمة:", error);
+        }
+      }, 3000);
+      
     } catch (error) {
       console.error("خطأ في إضافة الخدمة: ", error);
-      alert("حدث خطأ في إضافة الخدمة");
+      console.error("تفاصيل الخطأ:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
+      alert(`حدث خطأ في إضافة الخدمة: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
